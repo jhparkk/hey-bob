@@ -1,0 +1,118 @@
+{
+    "version": 1,
+    "jobs": [
+        {
+            "id": "8b3a1bc7-3adb-41e6-a962-6a427e6ac705",
+            "agentId": "main",
+            "name": "daily-crypto-report",
+            "description": "Jo가 매일 오전 9시 BTC/ETH 시세 및 경제 이슈 조사 후 Bob이 종한님께 DM 전송",
+            "enabled": true,
+            "createdAtMs": 1772791302767,
+            "updatedAtMs": 1776913534903,
+            "schedule": {
+                "kind": "cron",
+                "expr": "0 9 * * *",
+                "tz": "Asia/Seoul"
+            },
+            "sessionTarget": "isolated",
+            "wakeMode": "now",
+            "payload": {
+                "kind": "agentTurn",
+                "workDir": "/tmp",
+                "preprocessScript": "/home/jhpark/hey-bob/gateway-claude-discord/scripts/daily-report-collect.sh",
+                "message": "아래 '수집된 시장 데이터'를 기반으로 일일 크립토 리포트를 작성하라.\n\n## Step 1: 암호화폐 뉴스 수집\nWebSearch 도구로 최근 24시간 내 암호화폐 뉴스를 검색하라.\n검색어: \"bitcoin ethereum crypto news today\" + \"암호화폐 비트코인 이더리움 뉴스 오늘\"\n주요 뉴스 3~5개 수집 (제목 + 핵심 한 줄 요약).\n\n## Step 2: 시장 분위기 분석\n수집된 데이터(지표 + 뉴스)를 종합하여:\n1. **시장 분위기**: 강세/약세/중립 + 근거 한 줄\n2. **주요 키워드**: 뉴스에서 반복 등장하는 키워드 3~5개\n3. **리스크 요인**: 주의해야 할 이슈 1~2개\n\n## Step 3: 포트폴리오별 전략 제언\n수집된 포트폴리오 현황 + 시장 분위기를 종합하여 각 포트폴리오에 간단한 오늘의 운용 방향을 제시하라 (1~2줄씩).\n\n## 출력 포맷 (이 형식 그대로 출력)\n\n📊 **09:00 일일 리포트**\n\n📈 **시장 현황**\nBTC $가격 | RSI:값 | ADX:값 | 국면: 횡보/추세/하락\nETH $가격 | RSI:값 | ADX:값 | 국면: 횡보/추세/하락\nSOL $가격 | RSI:값 | ADX:값 | 국면: 횡보/추세/하락\n\n💼 **포트폴리오 현황**\n(수집된 데이터의 포트폴리오 목록 전체, 각 1줄)\n[포트폴리오명] 총자산 $XX | ROI X.X% | 코인별 포지션\n\n📋 **어제 거래 내역** (없으면 \"없음\")\n(수집된 거래 내역 그대로)\n\n📰 **시장 분위기**\n분위기: 강세/약세/중립 — 근거 한 줄\n주요 키워드: 키워드1, 키워드2, 키워드3\n리스크: 주의 이슈\n\n🗞️ **주요 뉴스**\n• 뉴스 제목 1 — 핵심 요약\n• 뉴스 제목 2 — 핵심 요약\n• 뉴스 제목 3 — 핵심 요약\n\n🎯 **오늘의 전략 제언**\n[포트폴리오명]: 운용 방향 한 줄\n[포트폴리오명]: 운용 방향 한 줄\n\n---\n## ⚠️ 금지 사항\n- POST /api/v1/strategy 호출 금지 (전략 생성/수정 금지)\n- Discord 전송 도구 사용 금지 (gateway가 자동 처리)",
+                "timeoutSeconds": 300
+            },
+            "delivery": {
+                "mode": "announce",
+                "channel": "discord",
+                "to": "user:1478663114827497565",
+                "quietHours": {
+                    "from": "23:00",
+                    "to": "07:00",
+                    "tz": "Asia/Seoul"
+                }
+            },
+            "state": {
+                "nextRunAtMs": 1776988800000,
+                "lastRunAtMs": 1776913507822,
+                "lastRunStatus": "error",
+                "lastStatus": "error",
+                "lastDurationMs": 27081,
+                "lastDeliveryStatus": "unknown",
+                "consecutiveErrors": 16,
+                "lastErrorReason": "rate_limit",
+                "lastError": "FallbackSummaryError: All models failed (6): openai/gpt-5.4: ⚠️ You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors. (rate_limit) | claude-cli/claude-sonnet-4-6: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-opus-4-6: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-opus-4-5: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-sonnet-4-5: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-haiku-4-5: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing)"
+            }
+        },
+        {
+            "id": "c2e4f8a1-7b3d-4e9f-a1c5-8d2e6f0b4a7c",
+            "name": "trend-rider-optimizer",
+            "description": "매일 08:30 KST 시장 분석 후 Trend Rider 전략 조건을 자동 최적화",
+            "enabled": true,
+            "schedule": {
+                "kind": "cron",
+                "expr": "30 8 * * *",
+                "tz": "Asia/Seoul"
+            },
+            "sessionTarget": "isolated",
+            "payload": {
+                "kind": "agentTurn",
+                "workDir": "/tmp",
+                "timeoutSeconds": 300,
+                "message": "매일 08:30 KST, 현재 시장 데이터를 분석해서 Trend Rider 전략(id=6)의 매수/매도 조건을 오늘 장에 최적화하여 업데이트하라.\n\n## ⚠️ 절대 금지\n- POST /api/v1/strategy 호출 금지 (새 전략 생성됨)\n- Trend Rider(id=6) 외 다른 전략 수정 금지\n\n## Step 1: 시장 데이터 수집 (Bash 도구로 직접 실행)\n```\nGET http://localhost:8080/api/v1/ticker\nGET http://localhost:8080/api/v1/ticker/hourly\nGET http://localhost:8080/api/v1/prices?coin=BTC&period=7d\nGET http://localhost:8080/api/v1/prices?coin=ETH&period=7d\nGET http://localhost:8080/api/v1/prices?coin=SOL&period=7d\nGET http://localhost:8080/api/v1/simulation/trades?coin=BTC&portfolio_id=4&limit=20\nGET http://localhost:8080/api/v1/simulation/trades?coin=ETH&portfolio_id=4&limit=20\nGET http://localhost:8080/api/v1/simulation/trades?coin=SOL&portfolio_id=4&limit=20\n```\n\n## Step 2: 시장 국면 분석\n수집 데이터로 아래를 판단:\n1. **추세 강도**: ADX 값 (≤25 박스권 / 26~40 보통 / >40 강추세)\n2. **방향성**: 일봉 RSI + 최근 3일 양봉/음봉 비율\n3. **1시간봉 모멘텀**: ema9_1h vs ema21_1h 위치, macd_hist_1h 방향\n4. **변동성**: ATR14 수준 (일봉 기준)\n5. **최근 Trend Rider 거래 성과**: 최근 20건 trades 중 수익/손실 비율, 평균 보유 시간\n\n## Step 3: 국면별 최적 조건 결정\n\n**강추세 (ADX > 40)**:\n- 매수: ema9_1h > ema21_1h 만으로 충분, 보조 필터 완화\n- 익절: +4~5%로 높게, 추세 타기\n- 손절: -5%로 여유\n\n**보통 추세 (ADX 26~40)**:\n- 매수: ema9_1h > ema21_1h OR macd_hist_1h > 0, rsi14_1h 35~65\n- 익절: +2.5~3%\n- 손절: -4%\n\n**박스권 (ADX ≤ 25)**:\n- 매수: rsi14_1h ≤ 38 (과매도 반등) 추가, 진입 조건 완화\n- 익절: +1.5~2% (빠른 사이클)\n- 손절: -3%로 타이트\n\n**하락 바이어스** (음봉 우세 + RSI < 45):\n- 매수 조건 강화 (rsi14_1h ≤ 30으로 높임)\n- 매도 조건 완화 (빠른 청산)\n\n## Step 4: 전략 업데이트\n아래 형식으로 notes를 작성하여 PUT 호출:\n```\ncurl -X PUT http://localhost:8080/api/v1/strategy/6 \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"description\": \"...\", \"notes\": \"...\"}'\n```\n\nnotes는 반드시 아래 섹션을 포함:\n- ## Trend Rider (1h 추세 추종 전략) — 오늘 날짜 업데이트 명시\n- ### 오늘 시장 국면: 판단 결과 한 줄\n- ### 사용 지표\n- ### 매수 조건 (오늘 최적화된 수치)\n- ### 매도 조건 (오늘 최적화된 수치)\n- ### 손절\n\n## Step 5: 결과 출력 (Discord 전송용)\n아래 포맷으로 출력:\n\n🔧 **Trend Rider 전략 업데이트** (08:30 KST)\n📊 시장 국면: [국면명] | ADX: [값] | 방향: [상승/하락/중립]\n✏️ 변경 핵심:\n- 매수: [핵심 조건 한 줄]\n- 익절: [목표 %]\n- 손절: [%]"
+            },
+            "delivery": {
+                "mode": "announce",
+                "channel": "discord",
+                "to": "user:1478663114827497565"
+            }
+        },
+        {
+            "id": "afca1aa6-ebd4-43ba-9e2b-5bc157b8da54",
+            "agentId": "main",
+            "name": "30min-price-check",
+            "enabled": true,
+            "createdAtMs": 1772919041224,
+            "updatedAtMs": 1776913507822,
+            "schedule": {
+                "kind": "cron",
+                "expr": "*/30 * * * *",
+                "staggerMs": 300000
+            },
+            "sessionTarget": "isolated",
+            "wakeMode": "now",
+            "payload": {
+                "kind": "agentTurn",
+                "workDir": "/tmp",
+                "preprocessScript": "/home/jhpark/hey-bob/gateway-claude-discord/scripts/price-check-collect.sh",
+                "message": "아래 '수집된 시장 데이터'를 기반으로 각 포트폴리오×코인의 매매를 판단하고 실행하라.\n\n## 판단 규칙\n\n### 리스크 한도 (최우선)\n- ROI < -risk_limit_pct → 해당 포트폴리오 전 코인 즉시 전량 매도\n- 청산 포트폴리오는 이번 실행 내 추가 매수 금지\n\n### 시장 국면 (ADX 기준)\n- ADX ≤ 15: 무방향 — Momentum 전략 매수 금지, 보유분 청산 검토\n- ADX 16~30: 약추세 — 모든 전략 적용\n- ADX > 30: 강추세 — Momentum 유리, 그리드 SELL 신호 정상 실행\n\n### 일봉 바이어스 (일봉 기반 전략에만 적용)\n- 3일 중 2일 이상 양봉 + RSI > 50 → BUY 신호 강화\n- 3일 중 2일 이상 음봉 + RSI < 50 → BUY 억제, SELL 강화\n- 방향 불일치 시 신규 매수 보류\n- ⚠️ Trend Rider 전략은 1시간봉 지표(1시간봉 지표 섹션) 기준으로 판단 — 일봉 바이어스 미적용\n\n### 전략 조건 적용\n- 데이터에 표시된 각 코인의 조건 라인을 적용\n- Trend Rider: 1시간봉 지표 섹션의 ema9_1h/ema21_1h/macd_hist_1h/rsi14_1h 값으로 판단 (일봉 바이어스 무시)\n- 그 외 전략: CASH + 매수 조건 충족 + 바이어스 일치 → BUY\n- HOLDING + 매도/손절/익절 조건 충족 → SELL\n- 조건 미충족 → HOLD\n\n## 거래 실행\nBash 도구로 직접 실행 (데이터에 API 경로 명시됨)\n- amount: 달러 금액 또는 생략(전량)\n- reason: 전략명 + 조건 근거 한 줄\n\n## 알림 출력\n- 거래 발생 + notify:1 포트폴리오 → 아래 포맷 출력 (Discord 전송은 시스템 처리)\n\n⚡ HH:MM KST\n[포트폴리오명] [코인] BUY/SELL $가격\n이유: 조건 + 국면 한 줄 | 잔고: $XX (ROI%)\n\n- notify:0 이거나 거래 없음 → 아무것도 출력하지 않고 종료",
+                "timeoutSeconds": 300,
+                "model": "claude-haiku-4-5"
+            },
+            "delivery": {
+                "mode": "announce",
+                "channel": "discord",
+                "to": "user:1478663114827497565",
+                "notifyOnlyIf": "⚡",
+                "quietHours": {
+                    "from": "20:00",
+                    "to": "09:00",
+                    "tz": "Asia/Seoul"
+                }
+            },
+            "state": {
+                "nextRunAtMs": 1776917107822,
+                "lastRunAtMs": 1776913428635,
+                "lastRunStatus": "error",
+                "lastStatus": "error",
+                "lastDurationMs": 79187,
+                "lastDeliveryStatus": "not-requested",
+                "consecutiveErrors": 267,
+                "lastErrorReason": "rate_limit",
+                "lastError": "FallbackSummaryError: All models failed (6): openai/gpt-5.4: ⚠️ You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors. (rate_limit) | claude-cli/claude-sonnet-4-6: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-opus-4-6: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-opus-4-5: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-sonnet-4-5: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing) | claude-cli/claude-haiku-4-5: Third-party apps now draw from your extra usage, not your plan limits. Add more at claude.ai/settings/usage and keep going. (billing)"
+            },
+            "deleteAfterRun": false
+        }
+    ]
+}

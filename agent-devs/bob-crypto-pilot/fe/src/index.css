@@ -1,0 +1,72 @@
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { overflow-anchor: none; scroll-behavior: auto; }
+
+:root {
+  --bg:        #0d0d1a;
+  --surface:   #16213e;
+  --surface2:  #1a1a2e;
+  --accent:    #e94560;
+  --accent2:   #0f3460;
+  --text:      #e0e0e0;
+  --text-dim:  #888;
+  --border:    #2a2a4a;
+  --green:     #26a69a;
+  --red:       #ef5350;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-anchor: none;
+}
+
+/* Spinner animation */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+/* Markdown preview styles */
+.md-preview h2 {
+  color: #7ecfc9;
+  font-size: 16px;
+  margin: 14px 0 6px;
+  border-bottom: 1px solid #2a3a5a;
+  padding-bottom: 4px;
+}
+.md-preview h3 {
+  color: #a0c8c4;
+  font-size: 14px;
+  margin: 10px 0 4px;
+}
+.md-preview ul {
+  margin: 4px 0 8px 20px;
+  padding: 0;
+}
+.md-preview li {
+  margin: 2px 0;
+}
+.md-preview strong {
+  color: #e0f0ee;
+  font-weight: 700;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a3a6a;
+  border-radius: 3px;
+}
+
+/* Select styling */
+select option {
+  background: #1a1a2e;
+}

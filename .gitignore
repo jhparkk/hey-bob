@@ -1,0 +1,31 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.service
+
+
+# Process & Runtime
+*.pid
+*.log
+
+# SQLite Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Go Binaries
+agent-devs/bob-crypto-pilot/bob-crypto-pilot
+agent-devs/bob-crypto-pilot/crypto-tracker
+
+# Frontend Build Output
+agent-devs/*/fe/node_modules/
+agent-devs/*/fe/dist/
+agent-devs/*/static/assets/
+
+# WSL Zone Identifier (Windows metadata)
+*:Zone.Identifier
+
+# OS
+.DS_Store
+Thumbs.db

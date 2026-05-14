@@ -10,6 +10,7 @@
 | Project Name | Keywords | Status | Path |
 |--------------|----------|--------|------|
 | test-project | project keywords | 🟢 Active | `test-project/` |
+| bob-crypto-pilot | crypto, 암호화폐, pilot, trading | 🟢 Active | `bob-crypto-pilot/` |
 
 ---
 

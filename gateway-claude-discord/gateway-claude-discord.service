@@ -1,0 +1,16 @@
+[Unit]
+Description=Gateway Claude Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=jhpark
+WorkingDirectory=/home/jhpark/hey-bob/gateway-claude-discord
+EnvironmentFile=/home/jhpark/hey-bob/gateway-claude-discord/.env
+Environment=PATH=/home/jhpark/.nvm/versions/node/v24.14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/jhpark/hey-bob/gateway-claude-discord/gateway-claude-discord
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
