@@ -324,23 +324,23 @@ func GetAllPortfolios() ([]models.PortfolioSummary, error) {
 // and coin price changes for the same periods.
 func GetPerformance() ([]models.PortfolioPerformance, error) {
 	now := time.Now().UTC()
-	periods := []int{1, 7, 30}
 
 	// Fetch all portfolios
-	pfRows, err := db.DB.Query(`SELECT id, name FROM portfolios ORDER BY id ASC`)
+	pfRows, err := db.DB.Query(`SELECT id, name, created_at FROM portfolios ORDER BY id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("query portfolios: %w", err)
 	}
 	defer pfRows.Close()
 
 	type pfMeta struct {
-		id   int64
-		name string
+		id        int64
+		name      string
+		createdAt string
 	}
 	var portfolios []pfMeta
 	for pfRows.Next() {
 		var p pfMeta
-		if err := pfRows.Scan(&p.id, &p.name); err == nil {
+		if err := pfRows.Scan(&p.id, &p.name, &p.createdAt); err == nil {
 			portfolios = append(portfolios, p)
 		}
 	}
@@ -348,6 +348,22 @@ func GetPerformance() ([]models.PortfolioPerformance, error) {
 	var result []models.PortfolioPerformance
 
 	for _, pf := range portfolios {
+		// Calculate portfolio age in days for the "life" period card
+		lifeDays := 30
+		if pf.createdAt != "" {
+			dateStr := pf.createdAt
+			if len(dateStr) >= 10 {
+				dateStr = dateStr[:10]
+			}
+			if t, err := time.Parse("2006-01-02", dateStr); err == nil {
+				lifeDays = int(now.Sub(t).Hours() / 24)
+				if lifeDays < 1 {
+					lifeDays = 1
+				}
+			}
+		}
+		periods := []int{1, 7, 30, lifeDays}
+
 		// Get current states for this portfolio
 		stateRows, err := db.DB.Query(`
 			SELECT coin, cash, units, initial_capital, position
@@ -397,6 +413,10 @@ func GetPerformance() ([]models.PortfolioPerformance, error) {
 			perf := models.CoinPerformance{Coin: s.coin}
 
 			for _, days := range periods {
+				// Skip fixed periods that exceed the portfolio's actual age
+				if days != lifeDays && days > lifeDays {
+					continue
+				}
 				cutoff := now.AddDate(0, 0, -days)
 				cutoffStr := cutoff.Format("2006-01-02T15:04:05Z")
 
@@ -453,6 +473,9 @@ func GetPerformance() ([]models.PortfolioPerformance, error) {
 				case 30:
 					perf.Return30D = &retPtr
 					perf.PriceChange30D = priceChange
+				default: // lifeDays
+					perf.ReturnLife = &retPtr
+					perf.PriceChangeLife = priceChange
 				}
 			}
 
@@ -462,6 +485,7 @@ func GetPerformance() ([]models.PortfolioPerformance, error) {
 		result = append(result, models.PortfolioPerformance{
 			PortfolioID:   pf.id,
 			PortfolioName: pf.name,
+			MaxPeriod:     lifeDays,
 			Coins:         coinPerfs,
 		})
 	}

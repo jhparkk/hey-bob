@@ -104,18 +104,21 @@ type SimPortfoliosResponse struct {
 // ── Performance Models ─────────────────────────────────────────────────────
 
 type CoinPerformance struct {
-	Coin           string   `json:"coin"`
-	Return1D       *float64 `json:"return_1d"`
-	Return7D       *float64 `json:"return_7d"`
-	Return30D      *float64 `json:"return_30d"`
-	PriceChange1D  *float64 `json:"price_change_1d"`
-	PriceChange7D  *float64 `json:"price_change_7d"`
-	PriceChange30D *float64 `json:"price_change_30d"`
+	Coin            string   `json:"coin"`
+	Return1D        *float64 `json:"return_1d"`
+	Return7D        *float64 `json:"return_7d"`
+	Return30D       *float64 `json:"return_30d"`
+	ReturnLife      *float64 `json:"return_life"`
+	PriceChange1D   *float64 `json:"price_change_1d"`
+	PriceChange7D   *float64 `json:"price_change_7d"`
+	PriceChange30D  *float64 `json:"price_change_30d"`
+	PriceChangeLife *float64 `json:"price_change_life"`
 }
 
 type PortfolioPerformance struct {
 	PortfolioID   int64             `json:"portfolio_id"`
 	PortfolioName string            `json:"portfolio_name"`
+	MaxPeriod     int               `json:"max_period"` // actual days since portfolio creation, capped at 30
 	Coins         []CoinPerformance `json:"coins"`
 }
 

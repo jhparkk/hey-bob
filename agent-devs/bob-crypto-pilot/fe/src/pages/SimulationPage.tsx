@@ -371,10 +371,12 @@ const CoinPerformanceRow: React.FC<{ performance: PortfolioPerformance[]; portfo
   const coinPerf = pfPerf?.coins.find(c => c.coin === coin);
   if (!coinPerf) return null;
 
+  const lifeDays = pfPerf?.max_period ?? 30;
   const periods: { label: string; ret: number | null; price: number | null }[] = [
     { label: '1일', ret: coinPerf.return_1d, price: coinPerf.price_change_1d },
     { label: '7일', ret: coinPerf.return_7d, price: coinPerf.price_change_7d },
     { label: '30일', ret: coinPerf.return_30d, price: coinPerf.price_change_30d },
+    { label: `${lifeDays}일`, ret: coinPerf.return_life, price: coinPerf.price_change_life },
   ];
 
   return (

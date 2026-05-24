@@ -287,14 +287,17 @@ export interface CoinPerformance {
   return_1d: number | null;
   return_7d: number | null;
   return_30d: number | null;
+  return_life: number | null;
   price_change_1d: number | null;
   price_change_7d: number | null;
   price_change_30d: number | null;
+  price_change_life: number | null;
 }
 
 export interface PortfolioPerformance {
   portfolio_id: number;
   portfolio_name: string;
+  max_period: number;
   coins: CoinPerformance[];
 }
 
