@@ -252,6 +252,17 @@ func UpdateStrategy(c *gin.Context) {
 		return
 	}
 
+	// 빈 값은 기존 값 유지 (부분 업데이트)
+	if body.Name == "" {
+		body.Name = old.Name
+	}
+	if body.Description == "" {
+		body.Description = old.Description
+	}
+	if body.Signal == "" {
+		body.Signal = old.Signal
+	}
+
 	// notes가 변경된 경우 버전 증가 + 이전 스냅샷 저장
 	notesChanged := body.Notes != old.Notes
 	newVersion := old.Version
@@ -423,6 +434,7 @@ func CreatePortfolio(c *gin.Context) {
 	var body struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		Exchange    string `json:"exchange"`
 		Coins       []struct {
 			Coin           string  `json:"coin"`
 			InitialCapital float64 `json:"initial_capital"`
@@ -441,9 +453,13 @@ func CreatePortfolio(c *gin.Context) {
 		return
 	}
 
+	exchange := body.Exchange
+	if exchange == "" {
+		exchange = "binance"
+	}
 	now := nowKST()
-	res, err := db.DB.Exec(`INSERT INTO portfolios (name, description, created_at) VALUES (?, ?, ?)`,
-		body.Name, body.Description, now)
+	res, err := db.DB.Exec(`INSERT INTO portfolios (name, description, exchange, created_at) VALUES (?, ?, ?, ?)`,
+		body.Name, body.Description, exchange, now)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
 		return

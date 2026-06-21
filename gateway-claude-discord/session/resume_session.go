@@ -58,15 +58,17 @@ func (r *resumeRunner) send(ctx context.Context, message string) (string, error)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
-		if s := strings.TrimSpace(stderr.String()); s != "" {
-			return "", fmt.Errorf("%w\nstderr: %s", err, s)
-		}
-		return "", err
-	}
+	runErr := cmd.Run()
 
 	var result claudeResult
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		if runErr != nil {
+			errMsg := runErr.Error()
+			if s := strings.TrimSpace(stderr.String()); s != "" {
+				errMsg += "\nstderr: " + s
+			}
+			return "", fmt.Errorf("%s", errMsg)
+		}
 		return strings.TrimSpace(stdout.String()), nil
 	}
 	if result.IsError {

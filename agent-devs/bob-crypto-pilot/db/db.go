@@ -37,6 +37,16 @@ func Init(dataDir string) error {
 
 func createTables() error {
 	_, err := DB.Exec(`
+	-- portfolios exchange 컬럼 추가 (기존 DB 호환)
+	-- SQLite에서는 IF NOT EXISTS 미지원이므로 무시
+	`); _ = err
+
+	// portfolios에 exchange 컬럼이 없으면 추가
+	if _, err := DB.Exec(`ALTER TABLE portfolios ADD COLUMN exchange TEXT NOT NULL DEFAULT 'binance'`); err != nil {
+		// 이미 존재하는 경우 무시
+	}
+
+	_, err = DB.Exec(`
 	CREATE TABLE IF NOT EXISTS daily_prices (
 		id          INTEGER PRIMARY KEY AUTOINCREMENT,
 		coin        TEXT NOT NULL,
@@ -201,6 +211,140 @@ func createTables() error {
 		changed_by  TEXT NOT NULL DEFAULT 'system',
 		changed_at  TEXT NOT NULL,
 		snapshot    TEXT NOT NULL DEFAULT ''
+	);
+
+	CREATE TABLE IF NOT EXISTS upbit_daily_prices (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		coin        TEXT NOT NULL,
+		date        TEXT NOT NULL,
+		open        REAL NOT NULL,
+		high        REAL NOT NULL,
+		low         REAL NOT NULL,
+		close       REAL NOT NULL,
+		volume      REAL NOT NULL,
+		ma7         REAL NOT NULL DEFAULT 0,
+		ma20        REAL NOT NULL DEFAULT 0,
+		ma50        REAL NOT NULL DEFAULT 0,
+		ema9        REAL NOT NULL DEFAULT 0,
+		ema21       REAL NOT NULL DEFAULT 0,
+		rsi14       REAL NOT NULL DEFAULT 0,
+		macd        REAL NOT NULL DEFAULT 0,
+		macd_signal REAL NOT NULL DEFAULT 0,
+		bb_upper    REAL NOT NULL DEFAULT 0,
+		bb_middle   REAL NOT NULL DEFAULT 0,
+		bb_lower    REAL NOT NULL DEFAULT 0,
+		adx14       REAL NOT NULL DEFAULT 0,
+		created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(coin, date)
+	);
+
+	CREATE TABLE IF NOT EXISTS upbit_price_ticker (
+		coin           TEXT PRIMARY KEY,
+		checked_at     TEXT NOT NULL,
+		current_price  REAL NOT NULL DEFAULT 0,
+		prev_price     REAL NOT NULL DEFAULT 0,
+		volatility     REAL NOT NULL DEFAULT 0,
+		ma7            REAL NOT NULL DEFAULT 0,
+		ma20           REAL NOT NULL DEFAULT 0,
+		ma50           REAL NOT NULL DEFAULT 0,
+		rsi14          REAL NOT NULL DEFAULT 0,
+		macd           REAL NOT NULL DEFAULT 0,
+		macd_signal    REAL NOT NULL DEFAULT 0,
+		bb_upper       REAL NOT NULL DEFAULT 0,
+		bb_middle      REAL NOT NULL DEFAULT 0,
+		bb_lower       REAL NOT NULL DEFAULT 0,
+		ema9           REAL NOT NULL DEFAULT 0,
+		ema21          REAL NOT NULL DEFAULT 0,
+		adx14          REAL NOT NULL DEFAULT 0,
+		atr14          REAL NOT NULL DEFAULT 0,
+		atr50          REAL NOT NULL DEFAULT 0,
+		volume_ma20    REAL NOT NULL DEFAULT 0,
+		highest_high20 REAL NOT NULL DEFAULT 0,
+		current_volume REAL NOT NULL DEFAULT 0
+	);
+
+	CREATE TABLE IF NOT EXISTS upbit_hourly_ticker (
+		coin             TEXT PRIMARY KEY,
+		checked_at       TEXT NOT NULL,
+		ema9_1h          REAL NOT NULL DEFAULT 0,
+		ema21_1h         REAL NOT NULL DEFAULT 0,
+		rsi14_1h         REAL NOT NULL DEFAULT 0,
+		macd_1h          REAL NOT NULL DEFAULT 0,
+		macd_signal_1h   REAL NOT NULL DEFAULT 0,
+		macd_hist_1h     REAL NOT NULL DEFAULT 0,
+		bb_upper_1h      REAL NOT NULL DEFAULT 0,
+		bb_middle_1h     REAL NOT NULL DEFAULT 0,
+		bb_lower_1h      REAL NOT NULL DEFAULT 0,
+		vwap_24h         REAL NOT NULL DEFAULT 0,
+		price_change_4h  REAL NOT NULL DEFAULT 0,
+		price_change_24h REAL NOT NULL DEFAULT 0
+	);
+
+	CREATE TABLE IF NOT EXISTS bithumb_daily_prices (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		coin        TEXT NOT NULL,
+		date        TEXT NOT NULL,
+		open        REAL NOT NULL,
+		high        REAL NOT NULL,
+		low         REAL NOT NULL,
+		close       REAL NOT NULL,
+		volume      REAL NOT NULL,
+		ma7         REAL NOT NULL DEFAULT 0,
+		ma20        REAL NOT NULL DEFAULT 0,
+		ma50        REAL NOT NULL DEFAULT 0,
+		ema9        REAL NOT NULL DEFAULT 0,
+		ema21       REAL NOT NULL DEFAULT 0,
+		rsi14       REAL NOT NULL DEFAULT 0,
+		macd        REAL NOT NULL DEFAULT 0,
+		macd_signal REAL NOT NULL DEFAULT 0,
+		bb_upper    REAL NOT NULL DEFAULT 0,
+		bb_middle   REAL NOT NULL DEFAULT 0,
+		bb_lower    REAL NOT NULL DEFAULT 0,
+		adx14       REAL NOT NULL DEFAULT 0,
+		created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(coin, date)
+	);
+
+	CREATE TABLE IF NOT EXISTS bithumb_price_ticker (
+		coin           TEXT PRIMARY KEY,
+		checked_at     TEXT NOT NULL,
+		current_price  REAL NOT NULL DEFAULT 0,
+		prev_price     REAL NOT NULL DEFAULT 0,
+		volatility     REAL NOT NULL DEFAULT 0,
+		ma7            REAL NOT NULL DEFAULT 0,
+		ma20           REAL NOT NULL DEFAULT 0,
+		ma50           REAL NOT NULL DEFAULT 0,
+		rsi14          REAL NOT NULL DEFAULT 0,
+		macd           REAL NOT NULL DEFAULT 0,
+		macd_signal    REAL NOT NULL DEFAULT 0,
+		bb_upper       REAL NOT NULL DEFAULT 0,
+		bb_middle      REAL NOT NULL DEFAULT 0,
+		bb_lower       REAL NOT NULL DEFAULT 0,
+		ema9           REAL NOT NULL DEFAULT 0,
+		ema21          REAL NOT NULL DEFAULT 0,
+		adx14          REAL NOT NULL DEFAULT 0,
+		atr14          REAL NOT NULL DEFAULT 0,
+		atr50          REAL NOT NULL DEFAULT 0,
+		volume_ma20    REAL NOT NULL DEFAULT 0,
+		highest_high20 REAL NOT NULL DEFAULT 0,
+		current_volume REAL NOT NULL DEFAULT 0
+	);
+
+	CREATE TABLE IF NOT EXISTS bithumb_hourly_ticker (
+		coin             TEXT PRIMARY KEY,
+		checked_at       TEXT NOT NULL,
+		ema9_1h          REAL NOT NULL DEFAULT 0,
+		ema21_1h         REAL NOT NULL DEFAULT 0,
+		rsi14_1h         REAL NOT NULL DEFAULT 0,
+		macd_1h          REAL NOT NULL DEFAULT 0,
+		macd_signal_1h   REAL NOT NULL DEFAULT 0,
+		macd_hist_1h     REAL NOT NULL DEFAULT 0,
+		bb_upper_1h      REAL NOT NULL DEFAULT 0,
+		bb_middle_1h     REAL NOT NULL DEFAULT 0,
+		bb_lower_1h      REAL NOT NULL DEFAULT 0,
+		vwap_24h         REAL NOT NULL DEFAULT 0,
+		price_change_4h  REAL NOT NULL DEFAULT 0,
+		price_change_24h REAL NOT NULL DEFAULT 0
 	);
 	`)
 	return err

@@ -46,9 +46,11 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
       </div>
       {/* 네비게이션 탭 */}
       <nav style={{ display: 'flex', gap: 4, padding: '0 16px' }}>
-        {tabBtn('chart',    '📊 시세 차트')}
-        {tabBtn('sim',      '📈 시뮬레이션')}
-        {tabBtn('strategy', '📋 전략')}
+        {tabBtn('chart',       '📊 시세 차트')}
+        {tabBtn('sim',         '📈 바이낸스 시뮬')}
+        {tabBtn('sim-upbit',   '🇰🇷 업비트 시뮬')}
+        {tabBtn('sim-bithumb', '🟡 빗썸 시뮬')}
+        {tabBtn('strategy',    '📋 전략')}
       </nav>
     </header>
   );

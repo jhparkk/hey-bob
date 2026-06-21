@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
-import { getSimTrades, getSimPortfolios } from '../api';
+import { getSimTrades, getSimPortfolios, getUpbitSimPortfolios, getBithumbSimPortfolios } from '../api';
 
 interface Props {
   portfolioId: number;
+  exchange?: 'binance' | 'upbit' | 'bithumb';
 }
 
 interface ROIPoint {
@@ -12,7 +13,7 @@ interface ROIPoint {
   y: number; // ROI %
 }
 
-const PortfolioROIChart: React.FC<Props> = ({ portfolioId }) => {
+const PortfolioROIChart: React.FC<Props> = ({ portfolioId, exchange = 'binance' }) => {
   const [roiPoints, setRoiPoints] = useState<ROIPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +25,11 @@ const PortfolioROIChart: React.FC<Props> = ({ portfolioId }) => {
 
     const fetchData = async () => {
       try {
-        const simData = await getSimPortfolios();
+        const simData = exchange === 'upbit'
+          ? await getUpbitSimPortfolios()
+          : exchange === 'bithumb'
+          ? await getBithumbSimPortfolios()
+          : await getSimPortfolios();
         const pfItem = simData.portfolios.find(i => i.portfolio?.id === portfolioId);
         if (!pfItem) { setRoiPoints([]); return; }
 

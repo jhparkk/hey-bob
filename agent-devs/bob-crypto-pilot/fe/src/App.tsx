@@ -2,6 +2,8 @@ import React, { useState, useCallback } from 'react';
 import Header from './components/Header';
 import ChartPage from './pages/ChartPage';
 import SimulationPage from './pages/SimulationPage';
+import UpbitSimulationPage from './pages/UpbitSimulationPage';
+import BithumbSimulationPage from './pages/BithumbSimulationPage';
 import StrategyPage from './pages/StrategyPage';
 import type { Page } from './types';
 
@@ -27,12 +29,18 @@ const App: React.FC = () => {
     <>
       <Header activePage={activePage} onPageChange={handlePageChange} />
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 32px' }}>
-        {/* 세 페이지 모두 항상 마운트 유지 — CSS display 로만 전환 */}
+        {/* 모든 페이지 항상 마운트 유지 — CSS display 로만 전환 */}
         <div style={{ display: activePage === 'chart' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
           <ChartPage isActive={activePage === 'chart'} />
         </div>
         <div style={{ display: activePage === 'sim' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
           <SimulationPage />
+        </div>
+        <div style={{ display: activePage === 'sim-upbit' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
+          <UpbitSimulationPage />
+        </div>
+        <div style={{ display: activePage === 'sim-bithumb' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
+          <BithumbSimulationPage />
         </div>
         <div style={{ display: activePage === 'strategy' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
           <StrategyPage />

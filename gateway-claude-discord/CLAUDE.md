@@ -83,6 +83,19 @@ sudo systemctl status gateway-claude-discord
 ```
 `build.sh`가 빌드 → 서비스 재시작을 자동으로 수행한다.
 
+### 재빌드가 필요한 경우 vs 불필요한 경우
+
+| 변경 대상 | 재빌드 필요 | 적용 방법 |
+|-----------|------------|-----------|
+| `.go` 소스 파일 | O | `./build.sh` |
+| `cron/jobs.json` | X | Discord `!cron reload` |
+| `scripts/*.sh` | X | 즉시 반영 (런타임 실행) |
+
+- `cron` 패키지는 gateway 내에서 독립적인 기능으로 분리되어 있다.
+- `cron.Reload()`는 `jobs.json`을 재파싱 후 스케줄러를 재시작하는 메서드로, Discord `!cron reload` 명령이 직접 호출한다.
+- `scripts/*.sh`는 크론잡 실행 시점에 bash로 실행되므로 파일 수정 즉시 반영된다.
+- `.go` 파일을 건드리지 않았다면 `!cron reload`만으로 충분하다.
+
 ### 로그 확인
 ```bash
 journalctl -u gateway-claude-discord -f

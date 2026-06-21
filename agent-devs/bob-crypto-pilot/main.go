@@ -5,8 +5,8 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
-	"runtime"
 
 	"bob-crypto-pilot/db"
 	"bob-crypto-pilot/handlers"
@@ -20,8 +20,11 @@ var staticFiles embed.FS
 
 func main() {
 	// Determine data directory relative to executable
-	_, filename, _, _ := runtime.Caller(0)
-	projectRoot := filepath.Dir(filename)
+	ex, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Failed to get executable path: %v", err)
+	}
+	projectRoot := filepath.Dir(ex)
 	dataDir := filepath.Join(projectRoot, "data")
 
 	// Initialize database
@@ -40,6 +43,14 @@ func main() {
 
 	// Start daily sync scheduler (01:00 KST)
 	services.StartDailySyncScheduler()
+
+	// Start Upbit price tickers
+	services.StartUpbitPriceTicker()
+	services.StartUpbitHourlyTicker()
+
+	// Start Bithumb price tickers
+	services.StartBithumbPriceTicker()
+	services.StartBithumbHourlyTicker()
 
 	// Setup Gin router
 	r := gin.Default()
@@ -103,7 +114,7 @@ func main() {
 		v1.POST("/portfolios/:id/coins", handlers.AddCoinToPortfolio)
 		v1.DELETE("/portfolios/:id/coins/:coin", handlers.RemoveCoinFromPortfolio)
 
-		// Simulation routes
+		// Simulation routes (Binance)
 		sim := v1.Group("/simulation")
 		{
 			sim.GET("/status", handlers.GetSimStatus)
@@ -111,6 +122,26 @@ func main() {
 			sim.GET("/portfolios", handlers.GetSimPortfolios)
 			sim.GET("/trades", handlers.GetSimTrades)
 			sim.GET("/performance", handlers.GetSimPerformance)
+		}
+
+		// Upbit routes
+		upbit := v1.Group("/upbit")
+		{
+			upbit.GET("/ticker", handlers.GetUpbitTicker)
+			upbit.GET("/ticker/hourly", handlers.GetUpbitHourlyTicker)
+			upbit.GET("/simulation/portfolios", handlers.GetUpbitSimPortfolios)
+			upbit.GET("/simulation/performance", handlers.GetUpbitSimPerformance)
+			upbit.POST("/sync", handlers.SyncUpbit)
+		}
+
+		// Bithumb routes
+		bithumb := v1.Group("/bithumb")
+		{
+			bithumb.GET("/ticker", handlers.GetBithumbTicker)
+			bithumb.GET("/ticker/hourly", handlers.GetBithumbHourlyTicker)
+			bithumb.GET("/simulation/portfolios", handlers.GetBithumbSimPortfolios)
+			bithumb.GET("/simulation/performance", handlers.GetBithumbSimPerformance)
+			bithumb.POST("/sync", handlers.SyncBithumb)
 		}
 	}
 

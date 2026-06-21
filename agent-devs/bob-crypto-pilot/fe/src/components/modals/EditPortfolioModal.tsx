@@ -19,10 +19,13 @@ interface Props {
   portfolioRiskLimitPct?: number;
   onClose: () => void;
   onSaved: () => void;
+  currency?: string;
+  defaultCapital?: number;
 }
 
 const EditPortfolioModal: React.FC<Props> = ({
   open, portfolioId, portfolioName, portfolioDesc, portfolioCoins, portfolioNotifyOnTrade, portfolioRiskLimitPct, onClose, onSaved,
+  currency = '$', defaultCapital = 100,
 }) => {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
@@ -56,7 +59,7 @@ const EditPortfolioModal: React.FC<Props> = ({
       setPendingAdds([]);
       setPendingRemoves([]);
       setAddingCoin(null);
-      setAddCapital('100');
+      setAddCapital(String(defaultCapital));
     }
   }, [open, portfolioName, portfolioDesc, portfolioCoins, portfolioNotifyOnTrade, portfolioRiskLimitPct]);
 
@@ -210,7 +213,7 @@ const EditPortfolioModal: React.FC<Props> = ({
               }}>
                 {c}{' '}
                 {capital != null && (
-                  <span style={{ fontSize: 11, color: isPendingRemove ? '#666' : '#aaa' }}>${capital}</span>
+                  <span style={{ fontSize: 11, color: isPendingRemove ? '#666' : '#aaa' }}>{currency}{capital?.toLocaleString()}</span>
                 )}
                 {isPendingAdd && <span style={{ fontSize: 11, color: '#26a69a' }}> (추가 예정)</span>}
                 {isPendingRemove && <span style={{ fontSize: 11, color: '#888' }}> (삭제 예정)</span>}
@@ -249,16 +252,17 @@ const EditPortfolioModal: React.FC<Props> = ({
         {addingCoin && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, padding: '8px', background: '#0f0f2f', borderRadius: 6, border: '1px solid #26a69a' }}>
             <span style={{ color: '#26a69a', fontSize: 13, minWidth: 30 }}>{addingCoin}</span>
-            <span style={{ color: '#aaa', fontSize: 12 }}>초기 자본 $</span>
+            <span style={{ color: '#aaa', fontSize: 12 }}>초기 자본 {currency}</span>
             <input
               type="number" min="1" value={addCapital}
               onChange={e => setAddCapital(e.target.value)}
-              style={{ width: 70, padding: '4px 8px', background: '#1a1a3e', border: '1px solid #3a3a6a', borderRadius: 4, color: '#e0e0e0', fontSize: 13 }}
+              style={{ width: 90, padding: '4px 8px', background: '#1a1a3e', border: '1px solid #3a3a6a', borderRadius: 4, color: '#e0e0e0', fontSize: 13 }}
             />
             <button
               onClick={() => handleStageAdd(addingCoin, parseFloat(addCapital) || 100)}
               style={{ padding: '4px 12px', background: '#26a69a', border: 'none', borderRadius: 4, color: '#fff', fontSize: 12, cursor: 'pointer' }}
             >추가</button>
+
             <button
               onClick={() => setAddingCoin(null)}
               style={{ padding: '4px 12px', background: 'transparent', border: '1px solid #555', borderRadius: 4, color: '#aaa', fontSize: 12, cursor: 'pointer' }}

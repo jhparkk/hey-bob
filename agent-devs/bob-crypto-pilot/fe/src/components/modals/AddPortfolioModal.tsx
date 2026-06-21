@@ -2,19 +2,27 @@ import React, { useState, useEffect } from 'react';
 import Modal, { Field, inputStyle, ModalFooter } from './Modal';
 import { createPortfolio } from '../../api';
 
-const AVAILABLE_COINS = ['BTC', 'ETH'];
+const AVAILABLE_COINS = ['BTC', 'ETH', 'SOL'];
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  exchange?: string;
+  currency?: string;
+  defaultCapital?: number;
 }
 
-const AddPortfolioModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
+const AddPortfolioModal: React.FC<Props> = ({
+  open, onClose, onCreated,
+  exchange = 'binance',
+  currency = '$',
+  defaultCapital = 100,
+}) => {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [coins, setCoins] = useState<Record<string, { checked: boolean; capital: number }>>(
-    Object.fromEntries(AVAILABLE_COINS.map(c => [c, { checked: true, capital: 100 }]))
+    Object.fromEntries(AVAILABLE_COINS.map(c => [c, { checked: c !== 'SOL', capital: defaultCapital }]))
   );
   const [status, setStatus] = useState('');
   const [isErr, setIsErr] = useState(false);
@@ -23,10 +31,11 @@ const AddPortfolioModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
     if (open) {
       setName('');
       setDesc('');
-      setCoins(Object.fromEntries(AVAILABLE_COINS.map(c => [c, { checked: true, capital: 100 }])));
+      setCoins(Object.fromEntries(AVAILABLE_COINS.map(c => [c, { checked: c !== 'SOL', capital: defaultCapital }])));
       setStatus('');
+      setIsErr(false);
     }
-  }, [open]);
+  }, [open, defaultCapital]);
 
   const handleSave = async () => {
     if (!name.trim()) { setIsErr(true); setStatus('❌ 이름은 필수입니다.'); return; }
@@ -35,7 +44,7 @@ const AddPortfolioModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
       .map(c => ({ coin: c, initial_capital: coins[c].capital }));
     if (selectedCoins.length === 0) { setIsErr(true); setStatus('❌ 코인을 최소 1개 선택하세요.'); return; }
     try {
-      const data = await createPortfolio({ name: name.trim(), description: desc.trim(), coins: selectedCoins });
+      const data = await createPortfolio({ name: name.trim(), description: desc.trim(), coins: selectedCoins, exchange });
       if (!data.success) throw new Error('API error');
       onClose();
       onCreated();
@@ -69,13 +78,13 @@ const AddPortfolioModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
               <strong>{coin}</strong>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#aaa' }}>
-              초기 자본: <span style={{ color: '#888' }}>$</span>
+              초기 자본: <span style={{ color: '#888' }}>{currency}</span>
               <input
                 type="number"
                 value={coins[coin].capital}
                 disabled={!coins[coin].checked}
-                onChange={e => setCoins(prev => ({ ...prev, [coin]: { ...prev[coin], capital: parseFloat(e.target.value) || 100 } }))}
-                style={{ width: 90, ...inputStyle, padding: '4px 8px', fontSize: 13 }}
+                onChange={e => setCoins(prev => ({ ...prev, [coin]: { ...prev[coin], capital: parseFloat(e.target.value) || defaultCapital } }))}
+                style={{ width: 100, ...inputStyle, padding: '4px 8px', fontSize: 13 }}
               />
             </label>
           </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useStrategy } from '../hooks/useStrategy';
-import { getPortfolioStrategies, getSimPortfolios } from '../api';
+import { getPortfolioStrategies } from '../api';
 import type { Strategy } from '../api';
 import EditStrategyModal from '../components/modals/EditStrategyModal';
 import AddPortfolioModal from '../components/modals/AddPortfolioModal';
@@ -86,13 +86,10 @@ const StrategyPage: React.FC = () => {
   useEffect(() => {
     if (!selectedPfId) { setPfMapping([]); return; }
     setPfMappingLoading(true);
-    Promise.all([
-      getSimPortfolios(),
-      getPortfolioStrategies(selectedPfId),
-    ]).then(([simData, stratData]) => {
-      const pfItem = (simData.portfolios || []).find(i => i.portfolio?.id === selectedPfId);
-      const pfCoins = pfItem ? pfItem.states.map(s => s.coin) : ['BTC', 'ETH'];
-      const rows = pfCoins.map(coin => {
+    getPortfolioStrategies(selectedPfId).then(stratData => {
+      const knownCoins = ['BTC', 'ETH', 'SOL'];
+      const pfCoins = knownCoins.filter(c => stratData[c] !== undefined);
+      const rows = (pfCoins.length > 0 ? pfCoins : ['BTC', 'ETH']).map(coin => {
         const coinData = stratData[coin] || {};
         const ps = coinData.portfolio_strategy;
         const stratName = coinData.strategy_name || (ps?.strategy_id ? `#${ps.strategy_id}` : '없음');

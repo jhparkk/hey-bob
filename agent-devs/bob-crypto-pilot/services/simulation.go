@@ -245,10 +245,13 @@ func GetTradeHistory(coin string, portfolioID int64, limit int) ([]models.SimTra
 	return trades, rows.Err()
 }
 
-// GetAllPortfolios retrieves all portfolios and their sim states
-func GetAllPortfolios() ([]models.PortfolioSummary, error) {
-	// Fetch all portfolios
-	rows, err := db.DB.Query(`SELECT id, name, description, notify_on_trade, risk_limit_pct, created_at FROM portfolios ORDER BY id ASC`)
+// GetAllPortfolios retrieves all portfolios and their sim states.
+// exchange: "binance" | "upbit"
+func GetAllPortfolios(exchange string) ([]models.PortfolioSummary, error) {
+	if exchange == "" {
+		exchange = "binance"
+	}
+	rows, err := db.DB.Query(`SELECT id, name, description, notify_on_trade, risk_limit_pct, created_at FROM portfolios WHERE exchange = ? ORDER BY id ASC`, exchange)
 	if err != nil {
 		return nil, fmt.Errorf("query portfolios: %w", err)
 	}
@@ -266,11 +269,17 @@ func GetAllPortfolios() ([]models.PortfolioSummary, error) {
 		return nil, err
 	}
 
-	// Get live prices
+	// Get live prices from the appropriate exchange
 	priceMap := map[string]float64{}
 	for _, coin := range []string{"BTC", "ETH", "SOL"} {
-		if lp, err := FetchLivePrice(coin); err == nil {
-			priceMap[coin] = lp.LastPrice
+		if exchange == "upbit" {
+			if lp, err := FetchUpbitLivePrice(coin); err == nil {
+				priceMap[coin] = lp.LastPrice
+			}
+		} else {
+			if lp, err := FetchLivePrice(coin); err == nil {
+				priceMap[coin] = lp.LastPrice
+			}
 		}
 	}
 
@@ -320,13 +329,22 @@ func GetAllPortfolios() ([]models.PortfolioSummary, error) {
 	return summaries, nil
 }
 
-// GetPerformance calculates daily/weekly/monthly returns per portfolio×coin
-// and coin price changes for the same periods.
-func GetPerformance() ([]models.PortfolioPerformance, error) {
+// GetPerformance calculates daily/weekly/monthly returns per portfolio×coin.
+// exchange: "binance" | "upbit"
+func GetPerformance(exchange string) ([]models.PortfolioPerformance, error) {
+	if exchange == "" {
+		exchange = "binance"
+	}
+	priceTable := "daily_prices"
+	tickerTable := "price_ticker"
+	if exchange == "upbit" {
+		priceTable = "upbit_daily_prices"
+		tickerTable = "upbit_price_ticker"
+	}
+
 	now := time.Now().UTC()
 
-	// Fetch all portfolios
-	pfRows, err := db.DB.Query(`SELECT id, name, created_at FROM portfolios ORDER BY id ASC`)
+	pfRows, err := db.DB.Query(`SELECT id, name, created_at FROM portfolios WHERE exchange = ? ORDER BY id ASC`, exchange)
 	if err != nil {
 		return nil, fmt.Errorf("query portfolios: %w", err)
 	}
@@ -391,9 +409,9 @@ func GetPerformance() ([]models.PortfolioPerformance, error) {
 			continue
 		}
 
-		// Fetch current prices from price_ticker
+		// Fetch current prices from the appropriate ticker table
 		priceMap := map[string]float64{}
-		tickerRows, err := db.DB.Query(`SELECT coin, current_price FROM price_ticker`)
+		tickerRows, err := db.DB.Query(`SELECT coin, current_price FROM ` + tickerTable)
 		if err == nil {
 			for tickerRows.Next() {
 				var coin string
@@ -436,11 +454,11 @@ func GetPerformance() ([]models.PortfolioPerformance, error) {
 					continue
 				}
 
-				// Get close price at cutoff date from daily_prices
+				// Get close price at cutoff date from the appropriate price table
 				dateStr := cutoff.Format("2006-01-02")
 				var priceAtT float64
 				err = db.DB.QueryRow(`
-					SELECT close FROM daily_prices
+					SELECT close FROM `+priceTable+`
 					WHERE coin = ? AND date <= ?
 					ORDER BY date DESC LIMIT 1`,
 					s.coin, dateStr,

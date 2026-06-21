@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"bob-crypto-pilot/db"
 	"bob-crypto-pilot/models"
 	"bob-crypto-pilot/services"
 
@@ -28,13 +29,35 @@ func GetSimStatus(c *gin.Context) {
 		return
 	}
 
-	// Fetch live price from Binance
-	live, err := services.FetchLivePrice(coin)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to fetch live price: " + err.Error()})
-		return
+	// Determine exchange type for this portfolio
+	var exchange string
+	db.DB.QueryRow("SELECT exchange FROM portfolios WHERE id = ?", portfolioID).Scan(&exchange)
+
+	// Fetch live price from the appropriate exchange
+	var currentPrice float64
+	switch exchange {
+	case "upbit":
+		live, err := services.FetchUpbitLivePrice(coin)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to fetch upbit live price: " + err.Error()})
+			return
+		}
+		currentPrice = live.LastPrice
+	case "bithumb":
+		live, err := services.FetchBithumbLivePrice(coin)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to fetch bithumb live price: " + err.Error()})
+			return
+		}
+		currentPrice = live.LastPrice
+	default:
+		live, err := services.FetchLivePrice(coin)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to fetch live price: " + err.Error()})
+			return
+		}
+		currentPrice = live.LastPrice
 	}
-	currentPrice := live.LastPrice
 
 	// Compute current value and return pct
 	currentValue := state.Cash + state.Units*currentPrice
@@ -139,7 +162,7 @@ func GetSimTrades(c *gin.Context) {
 // GetSimPortfolios godoc
 // GET /api/v1/simulation/portfolios
 func GetSimPortfolios(c *gin.Context) {
-	portfolios, err := services.GetAllPortfolios()
+	portfolios, err := services.GetAllPortfolios("binance")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
 		return
@@ -156,7 +179,7 @@ func GetSimPortfolios(c *gin.Context) {
 // GetSimPerformance godoc
 // GET /api/v1/simulation/performance
 func GetSimPerformance(c *gin.Context) {
-	portfolios, err := services.GetPerformance()
+	portfolios, err := services.GetPerformance("binance")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
 		return

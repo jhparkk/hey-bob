@@ -114,6 +114,26 @@ export const getSimTrades = (coin: string, portfolioId: number) =>
 export const getSimPerformance = () =>
   apiFetch<PerformanceResponse>('/api/v1/simulation/performance');
 
+// ── Upbit API ──────────────────────────────────────────────────────────────
+export const getUpbitTicker = () =>
+  apiFetch<TickerData[]>('/api/v1/upbit/ticker');
+
+export const getUpbitSimPortfolios = () =>
+  apiFetch<{ portfolios: SimPortfolioItem[] }>('/api/v1/upbit/simulation/portfolios');
+
+export const getUpbitSimPerformance = () =>
+  apiFetch<PerformanceResponse>('/api/v1/upbit/simulation/performance');
+
+// ── Bithumb API ────────────────────────────────────────────────────────────
+export const getBithumbTicker = () =>
+  apiFetch<TickerData[]>('/api/v1/bithumb/ticker');
+
+export const getBithumbSimPortfolios = () =>
+  apiFetch<{ portfolios: SimPortfolioItem[] }>('/api/v1/bithumb/simulation/portfolios');
+
+export const getBithumbSimPerformance = () =>
+  apiFetch<PerformanceResponse>('/api/v1/bithumb/simulation/performance');
+
 export const executeTrade = (body: ExecuteTradeBody) =>
   apiFetch<{ success: boolean; error?: string }>('/api/v1/simulation/trade', {
     method: 'POST',
@@ -238,11 +258,14 @@ export interface CreatePortfolioBody {
   name: string;
   description: string;
   coins: { coin: string; initial_capital: number }[];
+  exchange?: string;
 }
 
 export interface SimPortfolioItem {
   portfolio: Portfolio;
   states: SimState[];
+  total_value: number;
+  total_return_pct: number;
 }
 
 export interface SimState {
@@ -253,6 +276,9 @@ export interface SimState {
   position: string;
   avg_cost: number;
   portfolio_id: number;
+  current_value: number;
+  return_pct: number;
+  current_price: number;
 }
 
 export interface SimStatus {

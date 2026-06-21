@@ -109,7 +109,8 @@ func (h *Handler) runJob(job Job) {
 		data, serr := runScript(ctx, job.Payload.PreprocessScript)
 		if serr != nil {
 			log.Printf("[cron] job %s: preprocess script error: %v", job.Name, serr)
-		} else {
+		}
+		if strings.TrimSpace(data) != "" {
 			msg = msg + "\n\n## 수집된 시장 데이터\n" + data
 		}
 	}
@@ -170,7 +171,7 @@ func runScript(ctx context.Context, scriptPath string) (string, error) {
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {
-		return "", err
+		return out.String(), err
 	}
 	return out.String(), nil
 }

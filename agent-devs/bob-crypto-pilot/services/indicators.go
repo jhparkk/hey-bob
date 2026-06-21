@@ -314,10 +314,23 @@ type Indicators struct {
 type DailyIndicators = Indicators
 
 // CalcIndicators calculates daily indicators for a coin using daily_prices table
+// CalcIndicatorsUpbit는 upbit_daily_prices 테이블 기반으로 지표를 계산한다.
+func CalcIndicatorsUpbit(coin string) (*Indicators, error) {
+	return calcIndicatorsFromTable(coin, "upbit_daily_prices")
+}
+
+func CalcIndicatorsBithumb(coin string) (*Indicators, error) {
+	return calcIndicatorsFromTable(coin, "bithumb_daily_prices")
+}
+
 func CalcIndicators(coin string) (*Indicators, error) {
+	return calcIndicatorsFromTable(coin, "daily_prices")
+}
+
+func calcIndicatorsFromTable(coin, table string) (*Indicators, error) {
 	// 최근 120봉 조회 (ATR50 = 50개 TR 필요 → 51개 close + 여유)
 	rows, err := db.DB.Query(`
-		SELECT high, low, close, volume FROM daily_prices
+		SELECT high, low, close, volume FROM `+table+`
 		WHERE coin = ? ORDER BY date DESC LIMIT 120`, coin)
 	if err != nil {
 		return nil, err
