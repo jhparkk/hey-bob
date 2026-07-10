@@ -53,6 +53,7 @@ type SimTrade struct {
 	Action      string  `json:"action"`
 	Price       float64 `json:"price"`
 	Units       float64 `json:"units"`
+	Fee         float64 `json:"fee"`
 	CashBefore  float64 `json:"cash_before"`
 	CashAfter   float64 `json:"cash_after"`
 	UnitsBefore float64 `json:"units_before"`

@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, onPageChange }) => {
         {tabBtn('chart',       '📊 시세 차트')}
         {tabBtn('sim',         '📈 바이낸스 시뮬')}
         {tabBtn('sim-upbit',   '🇰🇷 업비트 시뮬')}
-        {tabBtn('sim-bithumb', '🟡 빗썸 시뮬')}
+        {tabBtn('sim-bithumb', '🪙 빗썸 시뮬')}
         {tabBtn('strategy',    '📋 전략')}
       </nav>
     </header>

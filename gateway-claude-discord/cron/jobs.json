@@ -73,6 +73,7 @@
                 "kind": "agentTurn",
                 "workDir": "/tmp",
                 "timeoutSeconds": 300,
+                "model": "claude-haiku-4-5",
                 "message": "pf11 (뉴스센티멘트 이벤트 드리븐) 포트폴리오의 BTC/ETH/SOL 매매를 판단하고 실행하라.\n\n## Step 1: 현재 포지션 확인\nBash 도구로 실행:\n```\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=BTC&portfolio_id=11\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=ETH&portfolio_id=11\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=SOL&portfolio_id=11\ncurl -s http://localhost:8080/api/v1/ticker\n```\n\n## Step 2: 뉴스 센티멘트 수집\nWebSearch 도구로 최근 4시간 내 암호화폐 뉴스를 검색하라.\n- 검색어 1: \"bitcoin ethereum crypto news\" (최신순)\n- 검색어 2: \"암호화폐 비트코인 이더리움 뉴스\" (최신순)\n- 검색어 3: 현재 시가총액 상위 코인 중 특이 이벤트 (ETF 승인/거절, 규제, 해킹, 업그레이드 등)\n\n뉴스 3~7개 수집 후 각각 아래 기준으로 점수 산정:\n- +2: 매우 긍정 (ETF 승인, 기관 대규모 매수, 규제 완화 발표)\n- +1: 긍정 (파트너십, 업그레이드 완료, 긍정적 전망)\n-  0: 중립 (일반 시장 동향, 가격 분석)\n- -1: 부정 (규제 우려, 소규모 해킹, 부정적 전망)\n- -2: 매우 부정 (대형 해킹, 규제 금지, 기관 대규모 매도)\n\n## Step 3: 센티멘트 점수 계산\n수집한 뉴스 점수의 평균을 계산 (소수점 1자리).\n\n**매매 기준:**\n- 평균 점수 ≥ +1.0: 긍정 시그널 → BTC/ETH/SOL 중 CASH 상태인 코인 전량 BUY\n- 평균 점수 ≤ -1.0: 부정 시그널 → HOLDING 상태인 코인 전량 SELL\n- -1.0 < 점수 < +1.0: 중립 → HOLD (거래 없음)\n\n**손절/익절 (HOLDING 코인에 항상 체크):**\n- 손절: 현재 ROI ≤ -15% → SELL (이유: 뉴스센티멘트 손절)\n- 익절: 현재 ROI ≥ +20% → SELL (이유: 뉴스센티멘트 익절)\n\n## Step 4: 거래 실행\nBash 도구로 실행. pf11은 바이낸스 USD 가격 사용.\n```\nPOST http://localhost:8080/api/v1/simulation/trade\nbody: {\"coin\":\"BTC\",\"action\":\"BUY\",\"price\":<현재USD가격>,\"reason\":\"뉴스센티멘트 +X.X점: [핵심근거]\",\"portfolio_id\":11}\n```\n\n## Step 5: 결과 출력\n거래가 발생한 경우에만 아래 포맷으로 출력:\n\n⚡ HH:MM KST\n[pf11 뉴스센티멘트] [코인] BUY/SELL $가격\n센티멘트: X.X점 — [근거 뉴스 핵심 1줄] | 잔고: $금액 (ROI%)\n\n거래 없음(HOLD)이면 아무것도 출력하지 않고 종료.\n\n## ⚠️ 금지 사항\n- pf11 외 다른 포트폴리오 거래 금지\n- POST /api/v1/strategy 호출 금지"
             },
             "delivery": {
@@ -105,7 +106,7 @@
                 "kind": "agentTurn",
                 "workDir": "/tmp",
                 "preprocessScript": "/home/jhpark/hey-bob/gateway-claude-discord/scripts/price-check-collect.sh",
-                "message": "아래 '수집된 시장 데이터'를 기반으로 각 포트폴리오×코인의 매매를 판단하고 실행하라.\n\n## ⚠️ 거래소별 지표 구분 (필수)\n- **pf1~4, pf9, pf11, pf17, pf18 (바이낸스)**: [바이낸스] 지표 섹션 사용, 가격은 USD($)\n- **pf5~8, pf10, pf19, pf20 (업비트)**: [업비트] 지표 섹션 사용, 가격은 KRW(₩)\n- **pf12~16, pf21, pf22 (빗썸)**: [빗썸] 지표 섹션 사용, 가격은 KRW(₩)\n- 거래소 혼용 절대 금지 — 거래소 지표로 다른 거래소 포트폴리오 판단 금지\n- **pf11 (뉴스센티멘트)**: 이 크론잡에서 HOLD만 유지, 거래 금지 — 별도 news-sentiment-trade 크론잡이 처리\n\n## 판단 규칙\n\n### 리스크 한도 (최우선)\n- ROI < -risk_limit_pct → 해당 포트폴리오 전 코인 즉시 전량 매도\n- 청산 포트폴리오는 이번 실행 내 추가 매수 금지\n\n### 시장 국면 (ADX 기준, 거래소별 ADX 독립 적용)\n- ADX ≤ 15: 무방향 — Momentum 전략 매수 금지, 보유분 청산 검토\n- ADX 16~30: 약추세 — 모든 전략 적용\n- ADX > 30: 강추세 — Momentum 유리, 그리드 SELL 신호 정상 실행\n\n### 일봉 바이어스 (일봉 기반 전략에만 적용)\n- 3일 중 2일 이상 양봉 + RSI > 50 → BUY 신호 강화\n- 3일 중 2일 이상 음봉 + RSI < 50 → BUY 억제, SELL 강화\n- 방향 불일치 시 신규 매수 보류\n- ⚠️ Trend Rider 전략은 각 거래소의 1시간봉 지표 기준으로 판단 — 일봉 바이어스 미적용\n  - Trend Rider notes에 [바이낸스]/[업비트]/[빗썸] 조건 섹션이 별도로 있음 — 각 포트폴리오는 자신의 거래소 섹션 조건만 적용\n  - pf4 (바이낸스 Trend Rider): [바이낸스] 섹션 조건 + 바이낸스 1시간봉 지표\n  - pf8 (업비트 Trend Rider): [업비트] 섹션 조건 + 업비트 1시간봉 지표\n  - pf15 (빗썸 Trend Rider): [빗썸] 섹션 조건 + 빗썸 1시간봉 지표\n\n### 전략 조건 적용\n- 데이터에 표시된 각 코인의 조건 라인을 적용\n- Trend Rider: notes의 해당 거래소 섹션([바이낸스]/[업비트]/[빗썸]) 조건을 해당 거래소 1시간봉 지표(ema9_1h/ema21_1h/macd_hist_1h/rsi14_1h)로 판단\n- 그 외 전략: CASH + 매수 조건 충족 + 바이어스 일치 → BUY\n- HOLDING + 매도/손절/익절 조건 충족 → SELL\n- 조건 미충족 → HOLD\n\n### pf9 (Fear&Greed 역발상) — 바이낸스 USD 가격 사용\n[외부 시그널] 섹션의 F&G 값 기준:\n- F&G ≤ 25 (Extreme Fear) + CASH → BTC/ETH/SOL 전량 BUY (역발상 매수)\n- F&G ≥ 75 (Extreme Greed) + HOLDING → 전량 SELL (역발상 매도)\n- 26 ≤ F&G ≤ 74 → HOLD\n- 손절: 매수가 대비 -15% → 전량 SELL\n- 익절: 매수가 대비 +30% → 전량 SELL\n\n### pf10 (김치프리미엄 역발상) — 업비트 KRW 가격 사용\n[외부 시그널] 섹션의 김프 + 한국 수요 지표 기준:\n**매수 (CASH → HOLDING)**\n- 강한 BUY: 김프 ≤ -0.5% AND 한국수요비율 < 5% → 전량 BUY\n- 일반 BUY: 김프 ≤ -0.5% AND RSI < 50 AND 업비트거래량강도 < 0.9 → 전량 BUY\n- 추세 BUY: 김프 방향 하락중(음수) AND 김프 < 0% AND RSI < 50 → 50% BUY\n- 기존 유지: 김프 ≤ -2% → 전량 BUY\n**매도 (HOLDING → CASH)**\n- 강한 SELL: 김프 ≥ 3% AND 한국수요비율 > 10% → 전량 SELL\n- 일반 SELL: 김프 ≥ 2% AND RSI > 60 → 50% SELL\n- 과열 SELL: 업비트거래량강도 > 1.5 AND 김프 > 1% → 50% SELL\n- 기존 유지: 김프 ≥ 5% → 전량 SELL\n- 손절: 매수가 대비 -8% → 전량 SELL\n- 익절: 매수가 대비 +25% → 전량 SELL\n\n## 거래 실행\nBash 도구로 직접 실행 (데이터에 API 경로 명시됨)\n- pf1-4, pf9, pf11, pf17, pf18: amount는 USD 금액, price는 USD 값\n- pf5-8, pf10, pf19, pf20: amount는 KRW 금액, price는 KRW 값\n- pf12-16, pf21, pf22: amount는 KRW 금액, price는 KRW 값 (빗썸 기준)\n- reason: 전략명 + 조건 근거 한 줄\n\n### pf16 (김치프리미엄 역발상) — 빗썸 KRW 가격 사용\n[외부 시그널] 섹션의 빗썸김프 + 한국 수요 지표 기준 (pf10과 동일 로직, 빗썸김프 값 사용):\n**매수 (CASH → HOLDING)**\n- 강한 BUY: 빗썸김프 ≤ -0.5% AND 한국수요비율 < 5% → 전량 BUY\n- 일반 BUY: 빗썸김프 ≤ -0.5% AND RSI < 50 AND 업비트거래량강도 < 0.9 → 전량 BUY\n- 추세 BUY: 빗썸김프 방향 하락중 AND 빗썸김프 < 0% AND RSI < 50 → 50% BUY\n- 기존 유지: 빗썸김프 ≤ -2% → 전량 BUY\n**매도 (HOLDING → CASH)**\n- 강한 SELL: 빗썸김프 ≥ 3% AND 한국수요비율 > 10% → 전량 SELL\n- 일반 SELL: 빗썸김프 ≥ 2% AND RSI > 60 → 50% SELL\n- 기존 유지: 빗썸김프 ≥ 5% → 전량 SELL\n- 손절: 매수가 대비 -8% → 전량 SELL\n- 익절: 매수가 대비 +25% → 전량 SELL\n\n### pf17 (바이낸스 변동성 돌파) / pf19 (업비트 변동성 돌파) / pf21 (빗썸 변동성 돌파)\n각 거래소의 일봉 지표 사용. 두 매수 모드 중 하나 충족 시 CASH → BUY:\n**Mode 1 — 돌파 매수**: current_price > (ma7 + atr14 × 0.2) AND rsi14 < 70 AND adx14 > 10(바낸)/5(업비트/빗썸)\n**Mode 2 — 지지 매수**: (ma7 - atr14 × 0.5) < current_price < ma7 AND rsi14 < 55 AND adx14 > 5\n  → 현재 ETH/SOL은 MA7 아래 ATR 0.5배 이내에 위치 — Mode 2 조건 우선 확인\n- SELL (익절): 매수가 대비 +2% → 전량 SELL\n- SELL (조기 익절): rsi14 > 65 AND 수익률 > +1.5% → 전량 SELL\n- SELL (손절): 매수가 대비 -2.5% → 즉시 전량 SELL\n- pf17: 바이낸스 USD 가격 / pf19: 업비트 KRW 가격 / pf21: 빗썸 KRW 가격\n\n### pf18 (바이낸스 BTC 도미넌스 로테이션) / pf20 (업비트 BTC 도미넌스) / pf22 (빗썸 BTC 도미넌스)\n[외부 시그널] 섹션의 BTC 도미넌스 값 기준 — ETH/SOL만 대상 (BTC는 HOLD)\n**매수 (CASH → HOLDING)**\n- 강한 BUY: BTC.D < 55% AND rsi14 < 55 AND CASH\n- 일반 BUY: BTC.D < 58% AND rsi14 < 60 AND CASH\n- 공포장 BUY: F&G < 20 (Extreme Fear) AND BTC.D < 60% AND rsi14 < 50 AND CASH → 역발상 분할 매수\n**매도 (HOLDING → CASH)**\n- BTC.D > 60% → 전량 SELL\n- BTC.D > 58% AND rsi14 > 65 → 50% SELL (과열 조기 청산)\n- 수익률 +15% → 50% SELL / 수익률 +25% → 잔여 전량 SELL\n- SELL (손절): 매수가 대비 -10% → 전량 SELL\n- 58% ≤ BTC.D ≤ 60% → HOLD\n- pf18: 바이낸스 USD 가격 / pf20: 업비트 KRW 가격 / pf22: 빗썸 KRW 가격\n\n## 알림 출력\n- 거래 발생 + notify:1 포트폴리오 → 아래 포맷 출력 (Discord 전송은 시스템 처리)\n\n⚡ HH:MM KST\n[포트폴리오명] [코인] BUY/SELL 가격(USD 또는 KRW)\n이유: 조건 + 국면 한 줄 | 잔고: 금액 (ROI%)\n\n- notify:0 이거나 거래 없음 → 아무것도 출력하지 않고 종료",
+                "message": "아래 '수집된 시장 데이터'를 기반으로 각 포트폴리오×코인의 매매를 판단하고 실행하라.\n\n## ⚠️ 거래소별 지표 구분 (필수)\n- **pf1~2, pf4, pf17 (바이낸스)**: [바이낸스] 지표 섹션 사용, 가격은 USD($)\n- **pf5~6, pf8, pf10, pf19 (업비트)**: [업비트] 지표 섹션 사용, 가격은 KRW(₩)\n- **pf12~13, pf15~16, pf21 (빗썸)**: [빗썸] 지표 섹션 사용, 가격은 KRW(₩)\n- 거래소 혼용 절대 금지 — 거래소 지표로 다른 거래소 포트폴리오 판단 금지\n- **pf3/7/14 (수동매매)**: 이 크론잡 제외 (데이터 미포함)\n- **pf11 (뉴스센티멘트)**: 이 크론잡 제외 — 별도 news-sentiment-trade 크론잡이 처리\n- **pf9/23/24 (Fear&Greed)**: 별도 fear-greed-trade 크론잡이 처리 — 이 크론잡에서 판단 금지\n- **pf18/20/22 (BTC 도미넌스)**: 별도 btc-dominance-trade 크론잡이 처리 — 이 크론잡에서 판단 금지\n\n## 판단 규칙\n\n### 리스크 한도 (최우선)\n- ROI < -risk_limit_pct → 해당 포트폴리오 전 코인 즉시 전량 매도\n- 청산 포트폴리오는 이번 실행 내 추가 매수 금지\n\n### 시장 국면 (ADX 기준, 거래소별 ADX 독립 적용)\n- ADX ≤ 15: 무방향 — Momentum 전략 매수 금지, 보유분 청산 검토\n- ADX 16~30: 약추세 — 모든 전략 적용\n- ADX > 30: 강추세 — Momentum 유리, 그리드 SELL 신호 정상 실행\n\n### 일봉 바이어스 (일봉 기반 전략에만 적용)\n- 3일 중 2일 이상 양봉 + RSI > 50 → BUY 신호 강화\n- 3일 중 2일 이상 음봉 + RSI < 50 → BUY 억제, SELL 강화\n- 방향 불일치 시 신규 매수 보류\n- ⚠️ Trend Rider 전략은 각 거래소의 1시간봉 지표 기준으로 판단 — 일봉 바이어스 미적용\n  - Trend Rider notes에 [바이낸스]/[업비트]/[빗썸] 조건 섹션이 별도로 있음 — 각 포트폴리오는 자신의 거래소 섹션 조건만 적용\n  - pf4 (바이낸스 Trend Rider): [바이낸스] 섹션 조건 + 바이낸스 1시간봉 지표\n  - pf8 (업비트 Trend Rider): [업비트] 섹션 조건 + 업비트 1시간봉 지표\n  - pf15 (빗썸 Trend Rider): [빗썸] 섹션 조건 + 빗썸 1시간봉 지표\n\n### 전략 조건 적용\n- 데이터에 표시된 각 코인의 조건 라인을 적용\n- Trend Rider: notes의 해당 거래소 섹션([바이낸스]/[업비트]/[빗썸]) 조건을 해당 거래소 1시간봉 지표(ema9_1h/ema21_1h/macd_hist_1h/rsi14_1h)로 판단\n- 그 외 전략: CASH + 매수 조건 충족 + 바이어스 일치 → BUY\n- HOLDING + 매도/손절/익절 조건 충족 → SELL\n- 조건 미충족 → HOLD\n\n### pf10 (김치프리미엄 역발상) — 업비트 KRW 가격 사용\n[외부 시그널] 섹션의 김프 + 한국 수요 지표 기준:\n**매수 (CASH → HOLDING)**\n- 강한 BUY: 김프 ≤ -0.5% AND 한국수요비율 < 5% → 전량 BUY\n- 일반 BUY: 김프 ≤ -0.5% AND RSI < 50 AND 업비트거래량강도 < 0.9 → 전량 BUY\n- 추세 BUY: 김프 방향 하락중(음수) AND 김프 < 0% AND RSI < 50 → 50% BUY\n- 기존 유지: 김프 ≤ -2% → 전량 BUY\n**매도 (HOLDING → CASH)**\n- 강한 SELL: 김프 ≥ 3% AND 한국수요비율 > 10% → 전량 SELL\n- 일반 SELL: 김프 ≥ 2% AND RSI > 60 → 50% SELL\n- 과열 SELL: 업비트거래량강도 > 1.5 AND 김프 > 1% → 50% SELL\n- 기존 유지: 김프 ≥ 5% → 전량 SELL\n- 손절: 매수가 대비 -8% → 전량 SELL\n- 익절: 매수가 대비 +25% → 전량 SELL\n\n## 거래 실행\nBash 도구로 직접 실행 (데이터에 API 경로 명시됨)\n- pf1-4, pf11, pf17: amount는 USD 금액, price는 USD 값\n- pf5-8, pf10, pf19: amount는 KRW 금액, price는 KRW 값\n- pf12-16, pf21: amount는 KRW 금액, price는 KRW 값 (빗썸 기준)\n- reason: 전략명 + 조건 근거 한 줄\n\n### pf16 (김치프리미엄 역발상) — 빗썸 KRW 가격 사용\n[외부 시그널] 섹션의 빗썸김프 + 한국 수요 지표 기준 (pf10과 동일 로직, 빗썸김프 값 사용):\n**매수 (CASH → HOLDING)**\n- 강한 BUY: 빗썸김프 ≤ -0.5% AND 한국수요비율 < 5% → 전량 BUY\n- 일반 BUY: 빗썸김프 ≤ -0.5% AND RSI < 50 AND 업비트거래량강도 < 0.9 → 전량 BUY\n- 추세 BUY: 빗썸김프 방향 하락중 AND 빗썸김프 < 0% AND RSI < 50 → 50% BUY\n- 기존 유지: 빗썸김프 ≤ -2% → 전량 BUY\n**매도 (HOLDING → CASH)**\n- 강한 SELL: 빗썸김프 ≥ 3% AND 한국수요비율 > 10% → 전량 SELL\n- 일반 SELL: 빗썸김프 ≥ 2% AND RSI > 60 → 50% SELL\n- 기존 유지: 빗썸김프 ≥ 5% → 전량 SELL\n- 손절: 매수가 대비 -8% → 전량 SELL\n- 익절: 매수가 대비 +25% → 전량 SELL\n\n### pf17 (바이낸스 변동성 돌파) / pf19 (업비트 변동성 돌파) / pf21 (빗썸 변동성 돌파)\n각 거래소의 일봉 지표 사용. 두 매수 모드 중 하나 충족 시 CASH → BUY:\n**Mode 1 — 돌파 매수**: current_price > (ma7 + atr14 × 0.2) AND rsi14 < 70 AND adx14 > 10(바낸)/5(업비트/빗썸)\n**Mode 2 — 지지 매수**: (ma7 - atr14 × 0.5) < current_price < ma7 AND rsi14 < 55 AND adx14 > 5\n  → 현재 ETH/SOL은 MA7 아래 ATR 0.5배 이내에 위치 — Mode 2 조건 우선 확인\n- SELL (익절): 매수가 대비 +2% → 전량 SELL\n- SELL (조기 익절): rsi14 > 65 AND 수익률 > +1.5% → 전량 SELL\n- SELL (손절): 매수가 대비 -2.5% → 즉시 전량 SELL\n- pf17: 바이낸스 USD 가격 / pf19: 업비트 KRW 가격 / pf21: 빗썸 KRW 가격\n\n## 알림 출력\n- 거래 발생 + notify:1 포트폴리오 → 아래 포맷 출력 (Discord 전송은 시스템 처리)\n\n⚡ HH:MM KST\n[포트폴리오명] [코인] BUY/SELL 가격(USD 또는 KRW)\n이유: 조건 + 국면 한 줄 | 잔고: 금액 (ROI%)\n\n- notify:0 이거나 거래 없음 → 아무것도 출력하지 않고 종료",
                 "timeoutSeconds": 300,
                 "model": "claude-haiku-4-5"
             },
@@ -121,6 +122,66 @@
                 }
             },
             "deleteAfterRun": false
+        },
+        {
+            "id": "e3a1f5b2-8c4d-4e7f-a9b1-2d6e0f3c8a5b",
+            "name": "fear-greed-trade",
+            "description": "하루 2회 (09:05, 21:05 KST) Fear&Greed 역발상 매매 — pf9(바낸), pf23(업비트), pf24(빗썸)",
+            "enabled": true,
+            "schedule": {
+                "kind": "cron",
+                "expr": "5 9,21 * * *",
+                "tz": "Asia/Seoul"
+            },
+            "sessionTarget": "isolated",
+            "payload": {
+                "kind": "agentTurn",
+                "workDir": "/tmp",
+                "timeoutSeconds": 240,
+                "model": "claude-haiku-4-5",
+                "message": "Fear&Greed 역발상 전략으로 pf9(바이낸스), pf23(업비트), pf24(빗썸) 매매를 판단하고 실행하라.\n\n## Step 1: 데이터 수집 (Bash 도구)\n```\ncurl -s 'https://api.alternative.me/fng/?limit=1'\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=BTC&portfolio_id=9\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=ETH&portfolio_id=9\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=SOL&portfolio_id=9\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=BTC&portfolio_id=23\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=ETH&portfolio_id=23\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=SOL&portfolio_id=23\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=BTC&portfolio_id=24\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=ETH&portfolio_id=24\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=SOL&portfolio_id=24\ncurl -s http://localhost:8080/api/v1/ticker\ncurl -s http://localhost:8080/api/v1/upbit/ticker\ncurl -s http://localhost:8080/api/v1/bithumb/ticker\n```\n\n## Step 2: 판단 규칙 (3개 포트폴리오 동일 로직)\n- F&G ≤ 25 (Extreme Fear) + CASH → BTC/ETH/SOL 전량 BUY\n- F&G ≥ 75 (Extreme Greed) + HOLDING → 전량 SELL\n- 26 ≤ F&G ≤ 74 → HOLD (거래 없음)\n- 손절: avg_cost 대비 ROI ≤ -15% + HOLDING → 전량 SELL\n- 익절: avg_cost 대비 ROI ≥ +30% + HOLDING → 전량 SELL\n\n## Step 3: 거래 실행\n- pf9: 바이낸스 USD 가격 사용\n- pf23: 업비트 KRW 가격 사용\n- pf24: 빗썸 KRW 가격 사용\n```\nPOST http://localhost:8080/api/v1/simulation/trade\nbody: {coin, action(BUY/SELL), price, reason, portfolio_id}\n```\n\n## Step 4: 결과 출력\n거래 발생 시:\n⚡ HH:MM KST\n[포트폴리오명] [코인] BUY/SELL 가격\nF&G: X/100 | 이유 한 줄 | 잔고: 금액 (ROI%)\n\n거래 없음(HOLD)이면 아무것도 출력하지 않고 종료."
+            },
+            "delivery": {
+                "mode": "announce",
+                "channel": "discord",
+                "to": "user:1478663114827497565",
+                "notifyOnlyIf": "⚡",
+                "quietHours": {
+                    "from": "23:00",
+                    "to": "07:00",
+                    "tz": "Asia/Seoul"
+                }
+            }
+        },
+        {
+            "id": "f4b2e6c3-9d5e-4f8a-b0c2-3e7f1a4d9b6c",
+            "name": "btc-dominance-trade",
+            "description": "2시간마다 BTC 도미넌스 로테이션 매매 — pf18(바낸), pf20(업비트), pf22(빗썸) ETH/SOL만 대상",
+            "enabled": true,
+            "schedule": {
+                "kind": "cron",
+                "expr": "0 */2 * * *",
+                "tz": "Asia/Seoul"
+            },
+            "sessionTarget": "isolated",
+            "payload": {
+                "kind": "agentTurn",
+                "workDir": "/tmp",
+                "timeoutSeconds": 240,
+                "model": "claude-haiku-4-5",
+                "message": "BTC 도미넌스 로테이션 전략으로 pf18(바이낸스), pf20(업비트), pf22(빗썸) 매매를 판단하고 실행하라. 대상 코인: ETH/SOL만 (BTC는 HOLD).\n\n## Step 1: 데이터 수집 (Bash 도구)\n```\ncurl -s 'https://api.coingecko.com/api/v3/global'\ncurl -s 'https://api.alternative.me/fng/?limit=1'\ncurl -s http://localhost:8080/api/v1/ticker\ncurl -s http://localhost:8080/api/v1/upbit/ticker\ncurl -s http://localhost:8080/api/v1/bithumb/ticker\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=ETH&portfolio_id=18\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=SOL&portfolio_id=18\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=ETH&portfolio_id=20\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=SOL&portfolio_id=20\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=ETH&portfolio_id=22\ncurl -s http://localhost:8080/api/v1/simulation/status?coin=SOL&portfolio_id=22\n```\n\n## Step 2: 판단 규칙 (3개 포트폴리오 동일 로직)\n**매수 (CASH → HOLDING)**\n- 강한 BUY: BTC.D < 55% AND rsi14 < 55 AND CASH\n- 일반 BUY: BTC.D < 58% AND rsi14 < 60 AND CASH\n- 공포장 BUY: F&G < 20 AND BTC.D < 60% AND rsi14 < 50 AND CASH → 50% 분할 매수\n**매도 (HOLDING → CASH)**\n- BTC.D > 60% → 전량 SELL\n- BTC.D > 58% AND rsi14 > 65 → 50% SELL\n- 수익률 +15% → 50% SELL / 수익률 +25% → 잔여 전량 SELL\n- 손절: ROI ≤ -10% → 전량 SELL\n- 58% ≤ BTC.D ≤ 60% → HOLD\n\n## Step 3: 거래 실행\n- pf18: 바이낸스 USD 가격 사용\n- pf20: 업비트 KRW 가격 사용\n- pf22: 빗썸 KRW 가격 사용\n```\nPOST http://localhost:8080/api/v1/simulation/trade\nbody: {coin, action(BUY/SELL), price, reason, portfolio_id}\n```\n\n## Step 4: 결과 출력\n거래 발생 시:\n⚡ HH:MM KST\n[포트폴리오명] [코인] BUY/SELL 가격\nBTC.D: X% | 이유 한 줄 | 잔고: 금액 (ROI%)\n\n거래 없음(HOLD)이면 아무것도 출력하지 않고 종료."
+            },
+            "delivery": {
+                "mode": "announce",
+                "channel": "discord",
+                "to": "user:1478663114827497565",
+                "notifyOnlyIf": "⚡",
+                "quietHours": {
+                    "from": "23:00",
+                    "to": "07:00",
+                    "tz": "Asia/Seoul"
+                }
+            }
         }
     ]
 }

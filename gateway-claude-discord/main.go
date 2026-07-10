@@ -11,6 +11,7 @@ import (
 	cronpkg "gateway-claude-discord/cron"
 	"gateway-claude-discord/db"
 	"gateway-claude-discord/discord"
+	"gateway-claude-discord/memory"
 	"gateway-claude-discord/session"
 )
 
@@ -30,6 +31,7 @@ func main() {
 
 	sessionHandler := session.NewHandler(database)
 	discordHandler := discord.NewHandler(token, sessionHandler)
+	discordHandler.SetMemory(memory.NewWriter("./memory"))
 
 	if err := discordHandler.Start(); err != nil {
 		log.Fatalf("discord start: %v", err)

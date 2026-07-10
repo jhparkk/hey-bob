@@ -67,11 +67,57 @@ func GetOrInitState(coin string, portfolioID int64) (*models.SimState, error) {
 	return state, nil
 }
 
+// krwMinPrice returns the minimum valid KRW price for a coin.
+// Prevents Binance USD prices from being accidentally used as KRW.
+func krwMinPrice(coin string) float64 {
+	switch coin {
+	case "BTC":
+		return 10_000_000 // ₩10M — BTC USD price is well below this
+	case "ETH":
+		return 100_000 // ₩100K — ETH USD price is well below this
+	case "SOL":
+		return 1_000 // ₩1K — SOL USD price is well below this
+	default:
+		return 0
+	}
+}
+
+// exchangeFeeRate returns the fee rate for the given exchange.
+// Binance: 0.1%, Upbit: 0.05%, Bithumb: 0.25%
+func exchangeFeeRate(exchange string) float64 {
+	switch exchange {
+	case "upbit":
+		return 0.0005
+	case "bithumb":
+		return 0.0025
+	default: // binance
+		return 0.001
+	}
+}
+
 // ExecuteTrade executes a trade and records it in sim_trades
 func ExecuteTrade(req models.TradeRequest) (*models.TradeResponse, error) {
 	if req.PortfolioID <= 0 {
 		req.PortfolioID = 1
 	}
+
+	// Lookup exchange and validate price
+	var exchange string
+	db.DB.QueryRow("SELECT exchange FROM portfolios WHERE id = ?", req.PortfolioID).Scan(&exchange)
+
+	if req.Action == "BUY" || req.Action == "SELL" {
+		if req.Price <= 0 {
+			return nil, fmt.Errorf("가격 파라미터 오류: 유효하지 않은 가격 (price=%.6f) — ticker API 응답을 확인하세요", req.Price)
+		}
+		if exchange == "upbit" || exchange == "bithumb" {
+			minPrice := krwMinPrice(req.Coin)
+			if minPrice > 0 && req.Price < minPrice {
+				return nil, fmt.Errorf("가격 파라미터 오류: USD 가격(%.0f)을 KRW 거래소(%s)에 사용 불가 — %s KRW 최솟값 %.0f", req.Price, exchange, req.Coin, minPrice)
+			}
+		}
+	}
+
+	feeRate := exchangeFeeRate(exchange)
 
 	// Ensure state exists
 	state, err := GetOrInitState(req.Coin, req.PortfolioID)
@@ -84,40 +130,38 @@ func ExecuteTrade(req models.TradeRequest) (*models.TradeResponse, error) {
 	cashAfter := cashBefore
 	unitsAfter := unitsBefore
 	newAvgCost := state.AvgCost
+	tradeFee := 0.0
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	switch req.Action {
 	case "BUY":
-		if req.Price <= 0 {
-			return nil, fmt.Errorf("invalid price for BUY: %f", req.Price)
-		}
 		if state.Position == "HOLDING" && state.Units > 0 && state.Cash == 0 {
-			return nil, fmt.Errorf("already fully invested, cannot BUY")
+			return nil, fmt.Errorf("가용잔고 부족으로 인한 거래 실패: 현금 잔고 없음 (전액 투자 중)")
 		}
 		spendAmount := cashBefore
 		if req.Amount > 0 {
 			if req.Amount > cashBefore {
-				return nil, fmt.Errorf("amount %.2f exceeds available cash %.2f", req.Amount, cashBefore)
+				return nil, fmt.Errorf("가용잔고 부족으로 인한 거래 실패: 요청금액 %.0f > 가용현금 %.0f", req.Amount, cashBefore)
 			}
 			spendAmount = req.Amount
 		}
-		boughtUnits := spendAmount / req.Price
+		tradeFee = spendAmount * feeRate
+		boughtUnits := (spendAmount - tradeFee) / req.Price
 		unitsAfter = unitsBefore + boughtUnits
 		cashAfter = cashBefore - spendAmount
-		// Calculate new average cost: (prev_avg * prev_units + spend) / new_units
+		// avg_cost: total spend (including fee) / total units
 		if unitsAfter > 0 {
 			newAvgCost = (state.AvgCost*unitsBefore + spendAmount) / unitsAfter
 		}
 	case "SELL":
-		if req.Price <= 0 {
-			return nil, fmt.Errorf("invalid price for SELL: %f", req.Price)
+		if state.Units == 0 {
+			return nil, fmt.Errorf("가용잔고 부족으로 인한 거래 실패: 보유 코인 없음 (현금 포지션)")
 		}
-		if state.Position == "CASH" {
-			return nil, fmt.Errorf("already in CASH position, cannot SELL")
-		}
-		cashAfter = cashBefore + unitsBefore*req.Price
+		grossCash := unitsBefore * req.Price
+		tradeFee = grossCash * feeRate
+		cashAfter = cashBefore + grossCash - tradeFee
 		unitsAfter = 0.0
-		newAvgCost = 0.0 // reset avg cost on full sell
+		newAvgCost = 0.0
 	case "HOLD":
 		// HOLD는 상태 변경 없음, 히스토리 기록 생략
 		currentValue := state.Cash + state.Units*req.Price
@@ -148,10 +192,10 @@ func ExecuteTrade(req models.TradeRequest) (*models.TradeResponse, error) {
 
 	// BUY/SELL만 히스토리 기록
 	result, err := db.DB.Exec(`
-		INSERT INTO sim_trades (coin, account, portfolio_id, action, price, units, cash_before, cash_after, units_before, units_after, reason, executed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO sim_trades (coin, account, portfolio_id, action, price, units, fee, cash_before, cash_after, units_before, units_after, reason, executed_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		req.Coin, account, req.PortfolioID, req.Action, req.Price,
-		tradedUnits,
+		tradedUnits, tradeFee,
 		cashBefore, cashAfter,
 		unitsBefore, unitsAfter,
 		req.Reason, now,
@@ -187,7 +231,8 @@ func ExecuteTrade(req models.TradeRequest) (*models.TradeResponse, error) {
 		PortfolioID: req.PortfolioID,
 		Action:      req.Action,
 		Price:       req.Price,
-		Units:       unitsAfter,
+		Units:       tradedUnits,
+		Fee:         tradeFee,
 		CashBefore:  cashBefore,
 		CashAfter:   cashAfter,
 		UnitsBefore: unitsBefore,
@@ -223,7 +268,7 @@ func GetTradeHistory(coin string, portfolioID int64, limit int) ([]models.SimTra
 		limit = 50
 	}
 	rows, err := db.DB.Query(`
-		SELECT id, coin, COALESCE(portfolio_id,1), action, price, units,
+		SELECT id, coin, COALESCE(portfolio_id,1), action, price, units, COALESCE(fee,0),
 		       cash_before, cash_after, units_before, units_after, COALESCE(reason,''), executed_at
 		FROM sim_trades WHERE coin = ? AND portfolio_id = ?
 		ORDER BY id DESC LIMIT ?`, coin, portfolioID, limit)
@@ -235,7 +280,7 @@ func GetTradeHistory(coin string, portfolioID int64, limit int) ([]models.SimTra
 	var trades []models.SimTrade
 	for rows.Next() {
 		var t models.SimTrade
-		if err := rows.Scan(&t.ID, &t.Coin, &t.PortfolioID, &t.Action, &t.Price, &t.Units,
+		if err := rows.Scan(&t.ID, &t.Coin, &t.PortfolioID, &t.Action, &t.Price, &t.Units, &t.Fee,
 			&t.CashBefore, &t.CashAfter, &t.UnitsBefore, &t.UnitsAfter,
 			&t.Reason, &t.ExecutedAt); err != nil {
 			return nil, err
@@ -272,11 +317,16 @@ func GetAllPortfolios(exchange string) ([]models.PortfolioSummary, error) {
 	// Get live prices from the appropriate exchange
 	priceMap := map[string]float64{}
 	for _, coin := range []string{"BTC", "ETH", "SOL"} {
-		if exchange == "upbit" {
+		switch exchange {
+		case "upbit":
 			if lp, err := FetchUpbitLivePrice(coin); err == nil {
 				priceMap[coin] = lp.LastPrice
 			}
-		} else {
+		case "bithumb":
+			if lp, err := FetchBithumbLivePrice(coin); err == nil {
+				priceMap[coin] = lp.LastPrice
+			}
+		default:
 			if lp, err := FetchLivePrice(coin); err == nil {
 				priceMap[coin] = lp.LastPrice
 			}
@@ -330,16 +380,20 @@ func GetAllPortfolios(exchange string) ([]models.PortfolioSummary, error) {
 }
 
 // GetPerformance calculates daily/weekly/monthly returns per portfolio×coin.
-// exchange: "binance" | "upbit"
+// exchange: "binance" | "upbit" | "bithumb"
 func GetPerformance(exchange string) ([]models.PortfolioPerformance, error) {
 	if exchange == "" {
 		exchange = "binance"
 	}
 	priceTable := "daily_prices"
 	tickerTable := "price_ticker"
-	if exchange == "upbit" {
+	switch exchange {
+	case "upbit":
 		priceTable = "upbit_daily_prices"
 		tickerTable = "upbit_price_ticker"
+	case "bithumb":
+		priceTable = "bithumb_daily_prices"
+		tickerTable = "bithumb_price_ticker"
 	}
 
 	now := time.Now().UTC()

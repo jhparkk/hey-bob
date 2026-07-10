@@ -72,6 +72,11 @@ func (h *Handler) onMessageCreate(s *discordgo.Session, m *discordgo.MessageCrea
 	}
 
 	log.Printf("[discord] channel=%s response=%q", m.ChannelID, truncate(response, 80))
+
+	if h.memory != nil {
+		h.memory.Append(m.Author.Username, content, response, time.Now())
+	}
+
 	sendChunked(s, m.ChannelID, response)
 }
 

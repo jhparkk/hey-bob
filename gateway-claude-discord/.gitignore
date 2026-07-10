@@ -1,3 +1,4 @@
 .env
 gateway.db
 gateway-claude-discord
+memory/*.md

@@ -24,7 +24,7 @@ function fmtDatetime(s: string): string {
   } catch { return s; }
 }
 
-const SimulationPage: React.FC = () => {
+const SimulationPage: React.FC<{ isActive?: boolean }> = ({ isActive }) => {
   const {
     simPortfolios, currentPortfolioId, setCurrentPortfolioId,
     currentCoin, setCurrentCoin, simStatus, simTrades,
@@ -70,6 +70,7 @@ const SimulationPage: React.FC = () => {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { if (isActive) loadAll(); }, [isActive, loadAll]);
 
   const switchPortfolio = async (pfId: number) => {
     const scrollY = window.scrollY;
@@ -456,14 +457,14 @@ const TradeHistory: React.FC<{ trades: SimTrade[]; coin: string }> = ({ trades, 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>
-            {['날짜', '액션', '가격', '수량', '잔고 (거래 후)', '사유'].map(h => (
+            {['날짜', '액션', '가격', '수량', '수수료', '잔고 (거래 후)', '사유'].map(h => (
               <th key={h} style={{ background: '#16213e', color: '#888', textAlign: 'left', padding: '8px 12px', borderBottom: '1px solid #2a2a4a', textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.05em' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {trades.length === 0 ? (
-            <tr><td colSpan={6} style={{ textAlign: 'center', color: '#555', padding: '24px 0', fontSize: 14 }}>거래 내역 없음</td></tr>
+            <tr><td colSpan={7} style={{ textAlign: 'center', color: '#555', padding: '24px 0', fontSize: 14 }}>거래 내역 없음</td></tr>
           ) : trades.map(t => {
             const coinValAfter = t.units_after * t.price;
             const actionColor = t.action === 'BUY' ? '#26a69a' : t.action === 'SELL' ? '#ef5350' : '#888';
@@ -473,6 +474,7 @@ const TradeHistory: React.FC<{ trades: SimTrade[]; coin: string }> = ({ trades, 
                 <td style={{ padding: '8px 12px', borderBottom: '1px solid #1e1e38', color: actionColor, fontWeight: 700 }}>{t.action}</td>
                 <td style={{ padding: '8px 12px', borderBottom: '1px solid #1e1e38', color: '#ccc' }}>{fmtMoney(t.price)}</td>
                 <td style={{ padding: '8px 12px', borderBottom: '1px solid #1e1e38', color: '#ccc' }}>{fmtUnits(t.units, coin)}</td>
+                <td style={{ padding: '8px 12px', borderBottom: '1px solid #1e1e38', color: '#e57373' }}>{t.fee > 0 ? fmtMoney(t.fee) : '—'}</td>
                 <td style={{ padding: '8px 12px', borderBottom: '1px solid #1e1e38', color: '#ccc' }}>
                   {t.units_after > 0 ? (
                     <>{fmtUnits(t.units_after, coin)}<br /><small style={{ color: '#aaa' }}>{fmtMoney(coinValAfter)}</small></>

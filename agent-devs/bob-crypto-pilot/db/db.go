@@ -46,6 +46,11 @@ func createTables() error {
 		// 이미 존재하는 경우 무시
 	}
 
+	// sim_trades에 fee 컬럼이 없으면 추가
+	if _, err := DB.Exec(`ALTER TABLE sim_trades ADD COLUMN fee REAL NOT NULL DEFAULT 0.0`); err != nil {
+		// 이미 존재하는 경우 무시
+	}
+
 	_, err = DB.Exec(`
 	CREATE TABLE IF NOT EXISTS daily_prices (
 		id          INTEGER PRIMARY KEY AUTOINCREMENT,

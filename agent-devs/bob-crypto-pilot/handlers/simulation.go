@@ -115,6 +115,11 @@ func ExecuteTrade(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "coin is required"})
 		return
 	}
+	validCoins := map[string]bool{"BTC": true, "ETH": true, "SOL": true}
+	if !validCoins[req.Coin] {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "invalid coin: " + req.Coin + " (allowed: BTC, ETH, SOL)"})
+		return
+	}
 	if req.Action != "BUY" && req.Action != "SELL" && req.Action != "HOLD" {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "action must be BUY, SELL, or HOLD"})
 		return

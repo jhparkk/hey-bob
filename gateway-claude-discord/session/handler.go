@@ -48,8 +48,9 @@ func (h *Handler) SendMessage(channelID, message string) (string, error) {
 	defer cancel()
 
 	response, err := r.send(ctx, message)
-	if err != nil && r.claudeSessionID != "" {
-		// 세션이 만료됐을 수 있으므로 초기화 후 재시도
+	if err != nil && r.claudeSessionID != "" && ctx.Err() == nil {
+		// 세션이 만료됐을 수 있으므로 초기화 후 재시도.
+		// ctx가 이미 타임아웃으로 만료된 경우 재시도해도 즉시 같은 에러가 나므로 건너뛴다.
 		log.Printf("[session] channel %s: session error, retrying fresh (err: %v)", channelID, err)
 		r.claudeSessionID = ""
 		h.model.Delete(channelID)

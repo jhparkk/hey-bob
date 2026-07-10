@@ -52,7 +52,11 @@ const StrategyCardItem: React.FC<StrategyCardProps> = ({ s, onEdit, onDelete, on
   </div>
 );
 
-const StrategyPage: React.FC = () => {
+interface StrategyPageProps {
+  isActive?: boolean;
+}
+
+const StrategyPage: React.FC<StrategyPageProps> = ({ isActive }) => {
   const {
     strategies, portfolios, loadAll, loadStrategies, loadPortfolios,
     saveStrategy, removeStrategy, changePortfolioStrategy,
@@ -81,6 +85,10 @@ const StrategyPage: React.FC = () => {
   const [pfMappingLoading, setPfMappingLoading] = useState(false);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  useEffect(() => {
+    if (isActive) loadPortfolios();
+  }, [isActive, loadPortfolios]);
 
   // Load portfolio mapping when dropdown changes
   useEffect(() => {

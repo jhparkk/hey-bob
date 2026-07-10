@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/bwmarrin/discordgo"
+	"gateway-claude-discord/memory"
 	"gateway-claude-discord/session"
 )
 
@@ -19,7 +20,13 @@ type Handler struct {
 	token          string
 	dg             *discordgo.Session
 	sessionHandler *session.Handler
-	cron           *CronOps // optional
+	cron           *CronOps       // optional
+	memory         *memory.Writer // optional
+}
+
+// SetMemory registers the memory writer for logging conversations.
+func (h *Handler) SetMemory(w *memory.Writer) {
+	h.memory = w
 }
 
 func NewHandler(token string, sessionHandler *session.Handler) *Handler {

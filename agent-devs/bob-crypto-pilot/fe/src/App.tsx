@@ -34,16 +34,16 @@ const App: React.FC = () => {
           <ChartPage isActive={activePage === 'chart'} />
         </div>
         <div style={{ display: activePage === 'sim' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
-          <SimulationPage />
+          <SimulationPage isActive={activePage === 'sim'} />
         </div>
         <div style={{ display: activePage === 'sim-upbit' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
-          <UpbitSimulationPage />
+          <UpbitSimulationPage isActive={activePage === 'sim-upbit'} />
         </div>
         <div style={{ display: activePage === 'sim-bithumb' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
-          <BithumbSimulationPage />
+          <BithumbSimulationPage isActive={activePage === 'sim-bithumb'} />
         </div>
         <div style={{ display: activePage === 'strategy' ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
-          <StrategyPage />
+          <StrategyPage isActive={activePage === 'strategy'} />
         </div>
       </main>
     </>

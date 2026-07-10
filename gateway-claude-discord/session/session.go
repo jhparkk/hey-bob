@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const claudeTimeout = 10 * time.Minute
+const claudeTimeout = 20 * time.Minute
 
 // runner is implemented by both resumeRunner and persistentRunner.
 type runner interface {

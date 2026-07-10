@@ -299,6 +299,7 @@ export interface SimTrade {
   action: string;
   price: number;
   units: number;
+  fee: number;
   cash_before: number;
   cash_after: number;
   units_before: number;
